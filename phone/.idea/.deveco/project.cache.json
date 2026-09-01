@@ -1,0 +1,16 @@
+{
+	"CommonInfo":{
+		"project.ide.version":"6.0.0.868",
+		"current.select.product":"default",
+		"current.select.buildMode":"",
+		"crossplatform.projectType":""
+	},
+	"BuildOptions":{
+		"SELECT_BUILD_PRODUCT":"default",
+		"BUNDLE_NAME":"com.ohscreen.server",
+		"BUILD_PATH":{
+			"OUTPUT_PATH":"/Users/wangjin/wj/harmonyOS_screen/phone/build/outputs/default"
+		},
+		"SELECT_BUILD_MODE":""
+	}
+}

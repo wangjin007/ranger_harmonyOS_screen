@@ -1,0 +1,1 @@
+/Users/wangjin/wj/harmonyOS_screen/phone/entry/.cxx/default/default/debug/arm64-v8a

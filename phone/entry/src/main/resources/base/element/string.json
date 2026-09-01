@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "OHScreen capture server"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "OHScreen"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "OHScreen"
+    },
+    {
+      "name": "keep_bg_reason",
+      "value": "投屏过程中需要在后台继续采集屏幕并发送到电脑"
+    }
+  ]
+}

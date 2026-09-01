@@ -1,0 +1,2 @@
+/Users/wangjin/wj/harmonyOS_screen/phone/entry/build/default/cache/default/default@HotReloadArkTS/esmodule/debug/entry/src/main/ets/entryability/EntryAbility.ts;&entry/src/main/ets/entryability/EntryAbility&;esm;entry|entry|1.0.0|src/main/ets/entryability/EntryAbility.ts;entry;false;ets
+/Users/wangjin/wj/harmonyOS_screen/phone/entry/build/default/cache/default/default@HotReloadArkTS/esmodule/debug/entry/src/main/ets/pages/Index.ts;&entry/src/main/ets/pages/Index&;esm;entry|entry|1.0.0|src/main/ets/pages/Index.ts;entry;false;ets

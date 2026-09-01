@@ -1,0 +1,3 @@
+/Users/wangjin/wj/harmonyOS_screen/phone/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/ohscreen.dir
+/Users/wangjin/wj/harmonyOS_screen/phone/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/wangjin/wj/harmonyOS_screen/phone/entry/.cxx/default/default/debug/arm64-v8a/CMakeFiles/rebuild_cache.dir

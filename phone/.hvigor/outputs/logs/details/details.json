@@ -1,0 +1,77 @@
+{
+  "HVIGOR_OHOS_PLUGIN": {
+    "MODULES": [
+      {
+        "MODULE_NAME": "1043bfc77febe75fafec0c4309faccf1",
+        "API_TYPE": "stageMode",
+        "INCREMENTAL_TASKS": {
+          "BUILD_NATIVE_WITH_CMAKE": true
+        }
+      }
+    ],
+    "NATIVE_COMPILER": "Default",
+    "BUILD_MODE": "debug",
+    "USE_NORMALIZED_OHMURL": true
+  },
+  "HVIGOR": {
+    "IS_INCREMENTAL": true,
+    "IS_DAEMON": true,
+    "IS_PARALLEL": true,
+    "IS_HVIGORFILE_TYPE_CHECK": false,
+    "TASK_TIME": {
+      "1043bfc77febe75fafec0c4309faccf1": {
+        "CreateModuleInfo": 650580,
+        "ConfigureCmake": 22800059,
+        "MergeProfile": 3917699,
+        "CreateBuildProfile": 1608456,
+        "PreCheckSyscap": 402035,
+        "ProcessIntegratedHsp": 838801,
+        "BuildNativeWithCmake": 4979962,
+        "MakePackInfo": 2256097,
+        "SyscapTransform": 1549716,
+        "BuildNativeWithNinja": 65310822,
+        "ProcessProfile": 175433938,
+        "ProcessStartupConfig": 4660912,
+        "GenerateLoaderJson": 11019277,
+        "ProcessLibs": 253958490,
+        "DoNativeStrip": 73044149,
+        "CacheNativeLibs": 4346438,
+        "CompileResource": 206409598,
+        "buildHotReloadResource": 891400,
+        "BuildJS": 1856203,
+        "HotReloadArkTS": 7338710247,
+        "GeneratePkgModuleJson": 2586698,
+        "ProcessCompiledResources": 877699,
+        "PackageHap": 85423690,
+        "PackingCheck": 3925500,
+        "SignHap": 1785225317,
+        "CollectDebugSymbol": 1189407,
+        "assembleHap": 263343
+      }
+    },
+    "APIS": [
+      "getHvigorConfig",
+      "getRootNodeDescriptor",
+      "getChildNode",
+      "getNodeByName",
+      "getAllNodes",
+      "getRootNode",
+      "getNodeName",
+      "getNodePath",
+      "subNodes",
+      "getExtraOption",
+      "getExtParam",
+      "getExtParams",
+      "getProperty",
+      "getProperties",
+      "getProductName",
+      "nodesEvaluated",
+      "getParameter",
+      "getCommandEntryTask",
+      "getStartParams"
+    ],
+    "CONFIG_PROPERTIES": {},
+    "TOTAL_TIME": 9963767347,
+    "BUILD_ID": "202609011329407600"
+  }
+}

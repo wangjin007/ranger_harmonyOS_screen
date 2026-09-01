@@ -1,0 +1,289 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000100000001 /* OHScreenApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000001 /* OHScreenApp.swift */; };
+		A10000000000000100000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000002 /* ContentView.swift */; };
+		A10000000000000100000003 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000003 /* AppModel.swift */; };
+		A10000000000000100000004 /* HdcClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000004 /* HdcClient.swift */; };
+		A10000000000000100000005 /* StreamSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000005 /* StreamSession.swift */; };
+		A10000000000000100000006 /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000006 /* H264Decoder.swift */; };
+		A10000000000000100000007 /* VideoCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000007 /* VideoCanvas.swift */; };
+		A10000000000000100000008 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000100000008 /* AVFoundation.framework */; };
+		A10000000000000100000009 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000100000009 /* VideoToolbox.framework */; };
+		A1000000000000010000000A /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000000000000010000000A /* Network.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000100000001 /* OHScreenApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OHScreenApp.swift; sourceTree = "<group>"; };
+		A20000000000000100000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A20000000000000100000003 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		A20000000000000100000004 /* HdcClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HdcClient.swift; sourceTree = "<group>"; };
+		A20000000000000100000005 /* StreamSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamSession.swift; sourceTree = "<group>"; };
+		A20000000000000100000006 /* H264Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264Decoder.swift; sourceTree = "<group>"; };
+		A20000000000000100000007 /* VideoCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCanvas.swift; sourceTree = "<group>"; };
+		A20000000000000100000008 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		A20000000000000100000009 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+		A2000000000000010000000A /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
+		A2000000000000010000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A30000000000000100000001 /* OHScreen.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OHScreen.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A40000000000000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000100000008 /* AVFoundation.framework in Frameworks */,
+				A10000000000000100000009 /* VideoToolbox.framework in Frameworks */,
+				A1000000000000010000000A /* Network.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A50000000000000100000001 = {
+			isa = PBXGroup;
+			children = (
+				A50000000000000100000002 /* OHScreen */,
+				A50000000000000100000003 /* Frameworks */,
+				A50000000000000100000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A50000000000000100000002 /* OHScreen */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000100000001 /* OHScreenApp.swift */,
+				A20000000000000100000002 /* ContentView.swift */,
+				A20000000000000100000003 /* AppModel.swift */,
+				A20000000000000100000004 /* HdcClient.swift */,
+				A20000000000000100000005 /* StreamSession.swift */,
+				A20000000000000100000006 /* H264Decoder.swift */,
+				A20000000000000100000007 /* VideoCanvas.swift */,
+				A2000000000000010000000B /* Info.plist */,
+			);
+			path = OHScreen;
+			sourceTree = "<group>";
+		};
+		A50000000000000100000003 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000100000008 /* AVFoundation.framework */,
+				A20000000000000100000009 /* VideoToolbox.framework */,
+				A2000000000000010000000A /* Network.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A50000000000000100000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A30000000000000100000001 /* OHScreen.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A60000000000000100000001 /* OHScreen */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000000000000100000002 /* Build configuration list for PBXNativeTarget "OHScreen" */;
+			buildPhases = (
+				A70000000000000100000001 /* Sources */,
+				A40000000000000100000001 /* Frameworks */,
+				A70000000000000100000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OHScreen;
+			productName = OHScreen;
+			productReference = A30000000000000100000001 /* OHScreen.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A90000000000000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A60000000000000100000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A80000000000000100000001 /* Build configuration list for PBXProject "OHScreen" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = "zh-Hans";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = A50000000000000100000001;
+			productRefGroup = A50000000000000100000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A60000000000000100000001 /* OHScreen */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A70000000000000100000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A70000000000000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000100000001 /* OHScreenApp.swift in Sources */,
+				A10000000000000100000002 /* ContentView.swift in Sources */,
+				A10000000000000100000003 /* AppModel.swift in Sources */,
+				A10000000000000100000004 /* HdcClient.swift in Sources */,
+				A10000000000000100000005 /* StreamSession.swift in Sources */,
+				A10000000000000100000006 /* H264Decoder.swift in Sources */,
+				A10000000000000100000007 /* VideoCanvas.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA0000000000000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA0000000000000100000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		AA0000000000000100000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OHScreen/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohscreen.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AA0000000000000100000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OHScreen/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohscreen.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000000000000100000001 /* Build configuration list for PBXProject "OHScreen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000100000001 /* Debug */,
+				AA0000000000000100000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A80000000000000100000002 /* Build configuration list for PBXNativeTarget "OHScreen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000100000003 /* Debug */,
+				AA0000000000000100000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A90000000000000100000001 /* Project object */;
+}

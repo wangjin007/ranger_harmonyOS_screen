@@ -1,0 +1,79 @@
+{
+  "" : {
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreen-primary.dia",
+    "emit-module-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreen-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreen-primary-emit-module.dia",
+    "pch" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreen-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreen-primary.swiftdeps"
+  },
+  "/Users/wangjin/wj/harmonyOS _screen/mac/OHScreen/AppModel.swift" : {
+    "const-values" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel.swiftconstvalues",
+    "dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel.d",
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel.dia",
+    "index-unit-output-path" : "/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel.o",
+    "llvm-bc" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel.bc",
+    "object" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel.o",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel.swiftdeps",
+    "swiftmodule" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/AppModel~partial.swiftmodule"
+  },
+  "/Users/wangjin/wj/harmonyOS _screen/mac/OHScreen/ContentView.swift" : {
+    "const-values" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView.d",
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView.dia",
+    "index-unit-output-path" : "/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView.o",
+    "llvm-bc" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView.bc",
+    "object" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView.o",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/ContentView~partial.swiftmodule"
+  },
+  "/Users/wangjin/wj/harmonyOS _screen/mac/OHScreen/H264Decoder.swift" : {
+    "const-values" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder.swiftconstvalues",
+    "dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder.d",
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder.dia",
+    "index-unit-output-path" : "/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder.o",
+    "llvm-bc" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder.bc",
+    "object" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder.o",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder.swiftdeps",
+    "swiftmodule" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/H264Decoder~partial.swiftmodule"
+  },
+  "/Users/wangjin/wj/harmonyOS _screen/mac/OHScreen/HdcClient.swift" : {
+    "const-values" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient.swiftconstvalues",
+    "dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient.d",
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient.dia",
+    "index-unit-output-path" : "/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient.o",
+    "llvm-bc" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient.bc",
+    "object" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient.o",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient.swiftdeps",
+    "swiftmodule" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/HdcClient~partial.swiftmodule"
+  },
+  "/Users/wangjin/wj/harmonyOS _screen/mac/OHScreen/OHScreenApp.swift" : {
+    "const-values" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp.swiftconstvalues",
+    "dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp.d",
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp.dia",
+    "index-unit-output-path" : "/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp.o",
+    "llvm-bc" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp.bc",
+    "object" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp.o",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp.swiftdeps",
+    "swiftmodule" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/OHScreenApp~partial.swiftmodule"
+  },
+  "/Users/wangjin/wj/harmonyOS _screen/mac/OHScreen/StreamSession.swift" : {
+    "const-values" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession.swiftconstvalues",
+    "dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession.d",
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession.dia",
+    "index-unit-output-path" : "/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession.o",
+    "llvm-bc" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession.bc",
+    "object" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession.o",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession.swiftdeps",
+    "swiftmodule" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/StreamSession~partial.swiftmodule"
+  },
+  "/Users/wangjin/wj/harmonyOS _screen/mac/OHScreen/VideoCanvas.swift" : {
+    "const-values" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas.swiftconstvalues",
+    "dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas.d",
+    "diagnostics" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas.dia",
+    "index-unit-output-path" : "/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas.o",
+    "llvm-bc" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas.bc",
+    "object" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas.o",
+    "swift-dependencies" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas.swiftdeps",
+    "swiftmodule" : "/Users/wangjin/wj/harmonyOS _screen/mac/DerivedData/Build/Intermediates.noindex/OHScreen.build/Debug/OHScreen.build/Objects-normal/x86_64/VideoCanvas~partial.swiftmodule"
+  }
+}
