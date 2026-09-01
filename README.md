@@ -1,5 +1,9 @@
 # OHScreen
 
+[中文](#ohscreen-中文) | [English](#ohscreen-english)
+
+## OHScreen 中文
+
 把 HarmonyOS NEXT 设备的屏幕实时镜像到 Mac，方便在电脑上查看真机画面。
 
 HarmonyOS 官方没有 Mac 版多屏协同。本项目走 `hdc` 调试通道（USB 或无线调试），做法接近 [scrcpy](https://github.com/Genymobile/scrcpy)：
@@ -109,3 +113,117 @@ phone/entry/build/default/outputs/default/entry-default-signed.hap
 ## 协议
 
 画面走自定义 TCP，格式见 [shared/protocol.md](shared/protocol.md)。改编码、分辨率或加音频 / 触控时，两端需要一起改。
+
+---
+
+## OHScreen English
+
+Mirror a HarmonyOS NEXT device screen to a Mac in real time.
+
+HarmonyOS has no official Multi-Screen Collaboration client for Mac. This project uses the `hdc` debug channel (USB or wireless debugging), similar to [scrcpy](https://github.com/Genymobile/scrcpy):
+
+1. The on-device HAP captures the screen, encodes it as H.264, and listens on port `27183`
+2. The Mac app forwards that port with `hdc fport`, then decodes and displays the stream
+
+This version sends video only: no remote control, no audio. See [TODO.md](TODO.md) for planned work.
+
+AOSP-based (old) HarmonyOS devices are not supported. Use scrcpy for those.
+
+### Features
+
+- Live view of a HarmonyOS NEXT phone / tablet / 2-in-1 in a Mac window
+- Auto-discover connected `hdc` devices
+- One-click port forwarding, launch the on-device app, and start mirroring
+- Optionally install a Debug HAP built by DevEco; if it is already installed, the app starts `com.ohscreen.server` directly
+- Hide the sidebars or enter a fullscreen view
+- Diagnostic screenshot: pull a system snapshot over `hdc` to confirm USB / hdc is working
+
+Capture settings (device side): longest edge ≤ 1280, 30 fps, ~8 Mbps H.264.
+
+### How it works
+
+```
+Mac  OHScreen  --hdc fport-->  device :27183  --H.264-->  Mac decode & display
+       |                          |
+  hdc list / install / aa start   AVScreenCapture + hardware encoder
+```
+
+| Path | Description |
+|------|-------------|
+| `phone/` | HarmonyOS HAP, open in DevEco Studio |
+| `mac/` | macOS client, open `mac/OHScreen.xcodeproj` in Xcode |
+| `shared/protocol.md` | TCP protocol used by both sides |
+
+Bundle ID: `com.ohscreen.server`  
+Ability: `EntryAbility`  
+Port: `27183`
+
+### Requirements
+
+- A HarmonyOS NEXT 5.0+ device with **Developer mode** and **USB debugging** (or wireless debugging) enabled
+- Mac: DevEco Studio (to build the HAP and provide `hdc`) and Xcode 15+
+- Use the same **personal Debug signing** you already use for HarmonyOS projects. No extra certificate is required.
+
+Confirm `hdc` works in a terminal:
+
+```bash
+hdc list targets
+```
+
+If the command is not found, add DevEco’s `toolchains` directory to `PATH`, or set the `HDC` environment variable to the `hdc` executable.
+
+### Usage
+
+#### 1. Build and install the device app
+
+1. Open `phone/` in DevEco Studio
+2. If the SDK / `compatibleSdkVersion` does not match your machine, change `phone/build-profile.json5` to the same values as your other projects
+3. Switch signing to **automatic signing** (do not reuse another developer’s certificate paths in this repo)
+4. In the run configuration, pick the `entry` target with the **H** icon, not Hot Reload (Hot Reload will not rebuild native `.so` after C++ changes)
+5. Run on a physical device
+
+You can also Build Hap only. The output is usually:
+
+```
+phone/entry/build/default/outputs/default/entry-default-signed.hap
+```
+
+`hdc install` accepts **Debug**-signed packages only.
+
+#### 2. Run the Mac app
+
+1. Open `mac/OHScreen.xcodeproj` in Xcode
+2. Set Signing to **Sign to Run Locally**
+3. Run
+4. Click **Refresh devices**, select your device, then **Connect**
+5. When the device asks for screen recording / content sharing, choose **Screen** and allow it
+
+After connecting, swipe home or open another app. Do not stay on the OHScreen page, and do not keep OHScreen on screen in split view, or the mirror will only show this app.
+
+If the HAP is already installed via DevEco, the Mac app will try to launch it even when it cannot find a local `.hap` file. You can also click **Choose HAP** and point it at `entry-default-signed.hap`.
+
+#### 3. Day-to-day controls
+
+| Action | What it does |
+|--------|----------------|
+| Refresh devices | Runs `hdc list targets` again |
+| Connect | Forwards `27183`, installs the HAP if needed, starts the Ability, and begins receiving frames |
+| Disconnect | Closes the local TCP connection; the device stops this capture session and waits again |
+| Diagnostic screenshot | Pulls a still image with `snapshot_display`, bypassing the video pipeline |
+| Fullscreen | Hides both sidebars and shows only the picture |
+
+Unplug, click Disconnect, or deny / stop recording on the device, then Connect again. The system will prompt for screen-recording permission on every session.
+
+### Current limits
+
+These come from the OS and this version. They are not bugs:
+
+- Every connection requires on-device screen-recording permission, and a recording pill appears in the status bar
+- Lock screen, password screens, and some DRM video are blacked out or paused by the system
+- No reverse control, no audio
+- Requires the `hdc` debug channel; this is not a general-purpose wireless caster
+- Debug-signed packages can only be installed on authorized developer devices and cannot be published to an app store
+
+### Protocol
+
+Video uses a custom TCP protocol. See [shared/protocol.md](shared/protocol.md). If you change the codec, resolution, or add audio / touch, update both sides together.
