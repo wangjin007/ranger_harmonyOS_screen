@@ -37,7 +37,18 @@ constexpr int kStateStreaming = 2;
 constexpr int kStateError = 3;
 constexpr int kBacklog = 1;
 constexpr int kPollMs = 200;
+constexpr uint32_t kCtrlMagic = 0xFFFFFFFFu;
+constexpr uint16_t kCtrlSizeChange = 1;
 constexpr char kMagic[4] = {'O', 'H', 'S', 'C'};
+
+int NormalizeRotation(int deg)
+{
+    int d = deg % 360;
+    if (d < 0) {
+        d += 360;
+    }
+    return ((d + 45) / 90) * 90 % 360;
+}
 
 void PutBe16(uint8_t *p, uint16_t v)
 {
@@ -177,7 +188,7 @@ ScreenStreamer &ScreenStreamer::Get()
     return inst;
 }
 
-int ScreenStreamer::Start(int port, int width, int height, int fps, int bitrate, uint64_t displayId)
+int ScreenStreamer::Start(int port, int width, int height, int fps, int bitrate, uint64_t displayId, int rotationDeg)
 {
     if (running_.load()) {
         return 0;
@@ -188,6 +199,8 @@ int ScreenStreamer::Start(int port, int width, int height, int fps, int bitrate,
     fps_ = fps > 0 ? fps : 30;
     bitrate_ = bitrate > 0 ? bitrate : 8000000;
     displayId_ = displayId;
+    rotationDeg_ = NormalizeRotation(rotationDeg);
+    startRotationDeg_ = rotationDeg_;
 
     listenFd_ = socket(AF_INET, SOCK_STREAM, 0);
     if (listenFd_ < 0) {
@@ -223,6 +236,46 @@ int ScreenStreamer::Start(int port, int width, int height, int fps, int bitrate,
     state_.store(kStateListening);
     acceptThread_ = std::thread([this]() { AcceptLoop(); });
     OH_LOG_INFO(LOG_APP, "listening on %{public}d (%{public}dx%{public}d @%{public}d)", port_, width_, height_, fps_);
+    return 0;
+}
+
+int ScreenStreamer::UpdateSize(int width, int height, uint64_t displayId, int rotationDeg)
+{
+    int w = width > 0 ? (width & ~1) : 0;
+    int h = height > 0 ? (height & ~1) : 0;
+    int rot = NormalizeRotation(rotationDeg);
+    if (w <= 0 || h <= 0) {
+        return -1;
+    }
+    if (displayId != 0) {
+        displayId_ = displayId;
+    }
+
+    if (state_.load() != kStateStreaming) {
+        width_ = w;
+        height_ = h;
+        rotationDeg_ = rot;
+        startRotationDeg_ = rot;
+        return 0;
+    }
+
+    if (rot == rotationDeg_) {
+        return 0;
+    }
+    rotationDeg_ = rot;
+    int rel = NormalizeRotation(rot - startRotationDeg_);
+    int visW = width_;
+    int visH = height_;
+    if (rel == 90 || rel == 270) {
+        visW = height_;
+        visH = width_;
+    }
+    OH_LOG_INFO(LOG_APP, "orientation %d -> vis %{public}dx%{public}d (enc %{public}dx%{public}d)", rel, visW, visH,
+        width_, height_);
+    if (!SendOrientationChange(visW, visH, rel)) {
+        MarkClientDead();
+        return -1;
+    }
     return 0;
 }
 
@@ -426,6 +479,47 @@ bool ScreenStreamer::SendHeader(int fd)
     return WriteAll(fd, hdr, sizeof(hdr));
 }
 
+bool ScreenStreamer::SendOrientationChange(int visW, int visH, int rotationDeg)
+{
+    if (!headerSent_.load()) {
+        return true;
+    }
+    int fd = -1;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        fd = clientFd_;
+    }
+    if (fd < 0) {
+        return false;
+    }
+    std::lock_guard<std::mutex> sendLock(sendMu_);
+    uint8_t pkt[12];
+    PutBe32(pkt, kCtrlMagic);
+    PutBe16(pkt + 4, kCtrlSizeChange);
+    PutBe16(pkt + 6, static_cast<uint16_t>(visW));
+    PutBe16(pkt + 8, static_cast<uint16_t>(visH));
+    PutBe16(pkt + 10, static_cast<uint16_t>(rotationDeg));
+    return WriteAll(fd, pkt, sizeof(pkt));
+}
+
+bool ScreenStreamer::SendCurrentCodecConfig()
+{
+    if (encoder_ == nullptr) {
+        return false;
+    }
+    OH_AVFormat *outFmt = OH_VideoEncoder_GetOutputDescription(static_cast<OH_AVCodec *>(encoder_));
+    if (outFmt == nullptr) {
+        return false;
+    }
+    uint8_t *cfg = nullptr;
+    size_t cfgSize = 0;
+    if (OH_AVFormat_GetBuffer(outFmt, OH_MD_KEY_CODEC_CONFIG, &cfg, &cfgSize) && cfg != nullptr && cfgSize > 0) {
+        SendCodecConfig(cfg, static_cast<int32_t>(cfgSize));
+    }
+    OH_AVFormat_Destroy(outFmt);
+    return true;
+}
+
 void ScreenStreamer::AcceptLoop()
 {
     while (running_.load()) {
@@ -475,18 +569,7 @@ void ScreenStreamer::AcceptLoop()
         headerSent_.store(true);
         state_.store(kStateStreaming);
         RequestKeyFrame();
-        if (encoder_ != nullptr) {
-            OH_AVFormat *outFmt = OH_VideoEncoder_GetOutputDescription(static_cast<OH_AVCodec *>(encoder_));
-            if (outFmt != nullptr) {
-                uint8_t *cfg = nullptr;
-                size_t cfgSize = 0;
-                if (OH_AVFormat_GetBuffer(outFmt, OH_MD_KEY_CODEC_CONFIG, &cfg, &cfgSize) && cfg != nullptr &&
-                    cfgSize > 0) {
-                    SendCodecConfig(cfg, static_cast<int32_t>(cfgSize));
-                }
-                OH_AVFormat_Destroy(outFmt);
-            }
-        }
+        SendCurrentCodecConfig();
         while (running_.load() && !clientDead_.load()) {
             pollfd cp;
             cp.fd = fd;
@@ -628,7 +711,8 @@ bool ScreenStreamer::StartCapture()
         return false;
     }
     OH_AVScreenCapture_SetMicrophoneEnabled(capture, false);
-    OH_AVScreenCapture_SetCanvasRotation(capture, true);
+    // 采集会话保持不变；旋转由 Mac 按相对角度转正，避免再次弹出录屏授权。
+    OH_AVScreenCapture_SetCanvasRotation(capture, false);
 
     captureReady_.store(0);
     auto *window = static_cast<OHNativeWindow *>(nativeWindow_);
@@ -650,6 +734,7 @@ bool ScreenStreamer::StartCapture()
         return false;
     }
     OH_LOG_INFO(LOG_APP, "capture started mode=HOME_SCREEN");
+    startRotationDeg_ = rotationDeg_;
     return true;
 }
 

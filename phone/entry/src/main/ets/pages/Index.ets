@@ -1,19 +1,14 @@
 import { common, wantAgent, WantAgent } from '@kit.AbilityKit';
-import { display } from '@kit.ArkUI';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import ohscreen from 'libohscreen.so';
+import { scaledCaptureSize } from '../utils/CaptureSize';
 
 const DOMAIN = 0x3200;
 const PORT = 27183;
-const MAX_SIDE = 1280;
 const FPS = 30;
 const BITRATE = 8_000_000;
-
-function even(n: number): number {
-  return n & ~1;
-}
 
 @Entry
 @Component
@@ -118,26 +113,9 @@ struct Index {
     this.keepAlive = false;
   }
 
-  private scaledSize(): [number, number, number] {
-    try {
-      const d = display.getDefaultDisplaySync();
-      let w = d.width;
-      let h = d.height;
-      const longest = Math.max(w, h);
-      if (longest > MAX_SIDE) {
-        const scale = MAX_SIDE / longest;
-        w = Math.floor(w * scale);
-        h = Math.floor(h * scale);
-      }
-      return [even(w), even(h), d.id];
-    } catch (err) {
-      return [720, 1280, 0];
-    }
-  }
-
   private startService(): void {
-    const size = this.scaledSize();
-    const rc = ohscreen.startServer(PORT, size[0], size[1], FPS, BITRATE, size[2]);
+    const size = scaledCaptureSize();
+    const rc = ohscreen.startServer(PORT, size[0], size[1], FPS, BITRATE, size[2], size[3]);
     this.running = rc === 0;
     if (rc === 0) {
       this.statusText = '等待 Mac 连接';
@@ -160,6 +138,8 @@ struct Index {
     if (!this.running) {
       return;
     }
+    const size = scaledCaptureSize();
+    ohscreen.updateSize(size[0], size[1], size[2], size[3]);
     const s = ohscreen.getState();
     if (s === 1) {
       this.statusText = '等待 Mac 连接';

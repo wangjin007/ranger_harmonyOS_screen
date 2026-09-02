@@ -1,9 +1,0 @@
-# ninja log v6
-559	693	1788232371876877205	/Users/qisd/Downloads/harmonyOS_screen/phone/entry/build/default/intermediates/cmake/default/obj/arm64-v8a/libohscreen.so	3bd6aa709c332ed0
-1371	1505	1787735491000624462	/Users/wangjin/wj/harmonyOS _screen/phone/entry/build/default/intermediates/cmake/default/obj/arm64-v8a/libohscreen.so	23dbd99f1b138fc6
-5	559	1788232371322082038	CMakeFiles/ohscreen.dir/screen_streamer.cpp.o	95619f86ca2cda98
-1777	2147	1787739015896442332	/Users/wangjin/wj/harmonyOS_screen/phone/entry/build/default/intermediates/cmake/default/obj/arm64-v8a/libohscreen.so	1c412534585d01db
-4	498	1788232371321633702	CMakeFiles/ohscreen.dir/napi_init.cpp.o	71e0b7a2dfd92df1
-15	2291	1788240502356453926	CMakeFiles/ohscreen.dir/napi_init.cpp.o	7fb5edd1ccd09e7d
-18	2823	1788240502360029775	CMakeFiles/ohscreen.dir/screen_streamer.cpp.o	b7074f1ed995caa7
-2823	3363	1788240505164543525	/Users/wangjin/wj/harmonyOS_screen/phone/entry/build/default/intermediates/cmake/default/obj/arm64-v8a/libohscreen.so	1c412534585d01db

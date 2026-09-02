@@ -19,6 +19,7 @@ struct StreamHeader {
     let width: Int
     let height: Int
     let fps: Int
+    var rotation: Int = 0
 }
 
 final class StreamSession {
@@ -27,6 +28,7 @@ final class StreamSession {
     private var buffer = Data()
     private var header: StreamHeader?
     private var onHeader: ((StreamHeader) -> Void)?
+    private var onSizeChange: ((StreamHeader) -> Void)?
     private var onFrame: ((Data, UInt64) -> Void)?
     private var onClose: ((Error?) -> Void)?
     private var closed = false
@@ -44,10 +46,12 @@ final class StreamSession {
         port: UInt16,
         retries: Int,
         onHeader: @escaping (StreamHeader) -> Void,
+        onSizeChange: @escaping (StreamHeader) -> Void,
         onFrame: @escaping (Data, UInt64) -> Void,
         onClose: @escaping (Error?) -> Void
     ) {
         self.onHeader = onHeader
+        self.onSizeChange = onSizeChange
         self.onFrame = onFrame
         self.onClose = onClose
         closed = false
@@ -126,6 +130,20 @@ final class StreamSession {
         }
         while buffer.count >= 12 {
             let length = Int(be32(buffer, 0))
+            if length == 0xFFFFFFFF {
+                let type = Int(buffer[4]) << 8 | Int(buffer[5])
+                let width = Int(buffer[6]) << 8 | Int(buffer[7])
+                let height = Int(buffer[8]) << 8 | Int(buffer[9])
+                let rotation = Int(buffer[10]) << 8 | Int(buffer[11])
+                buffer.removeSubrange(0..<12)
+                if type == 1, width > 0, height > 0 {
+                    let fps = header?.fps ?? 30
+                    let h = StreamHeader(width: width, height: height, fps: fps, rotation: rotation)
+                    header = h
+                    DispatchQueue.main.async { self.onSizeChange?(h) }
+                }
+                continue
+            }
             if length <= 0 || length > 8 * 1024 * 1024 {
                 throw StreamError.header
             }

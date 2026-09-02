@@ -147,6 +147,12 @@ final class AppModel: ObservableObject {
                             self.status = "投屏中 \(header.width)×\(header.height)@\(header.fps)"
                             self.log("收到视频头 \(header.width)×\(header.height) @\(header.fps)")
                         },
+                        onSizeChange: { header in
+                            self.renderer.setDisplayRotation(header.rotation)
+                            self.videoSize = CGSize(width: header.width, height: header.height)
+                            self.status = "投屏中 \(header.width)×\(header.height)@\(header.fps)"
+                            self.log("方向切换 \(header.rotation)° \(header.width)×\(header.height)")
+                        },
                         onFrame: { data, pts in
                             self.renderer.decode(annexB: data, ptsUs: pts)
                             let bytes = data.count

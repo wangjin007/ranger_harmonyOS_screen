@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Xcode
+mac/DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+
+# Harmony / DevEco
+phone/.hvigor/
+phone/.idea/.deveco/
+phone/.idea/vcs.xml
+phone/.idea/workspace.xml
+phone/oh_modules/
+phone/entry/.cxx/
+phone/entry/build/
+phone/entry/oh_modules/
+**/.preview
+**/oh_modules
+node_modules/
+
+# Local logs
+*.log

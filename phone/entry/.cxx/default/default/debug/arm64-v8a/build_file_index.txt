@@ -1,1 +1,0 @@
-/Users/wangjin/wj/harmonyOS_screen/phone/entry/src/main/cpp/CMakeLists.txt

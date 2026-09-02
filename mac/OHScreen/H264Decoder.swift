@@ -17,6 +17,8 @@ final class VideoRenderer {
     private let lock = NSLock()
     private let ciContext = CIContext(options: [.cacheIntermediates: false])
     private var decodedFrameCount = 0
+    private var displayRotation = 0
+    private let rotationLock = NSLock()
 
     init() {
         let layer = CALayer()
@@ -39,12 +41,31 @@ final class VideoRenderer {
         loggedFrame = false
         decodedFrameCount = 0
         lock.unlock()
+        rotationLock.lock()
+        displayRotation = 0
+        rotationLock.unlock()
         DispatchQueue.main.async {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.displayLayer.contents = nil
             CATransaction.commit()
         }
+    }
+
+    private func invalidateFormatLocked() {
+        formatDesc = nil
+        if let decompressionSession {
+            VTDecompressionSessionWaitForAsynchronousFrames(decompressionSession)
+            VTDecompressionSessionInvalidate(decompressionSession)
+        }
+        decompressionSession = nil
+        loggedReady = false
+    }
+
+    func setDisplayRotation(_ degrees: Int) {
+        rotationLock.lock()
+        displayRotation = degrees
+        rotationLock.unlock()
     }
 
     func decode(annexB: Data, ptsUs: UInt64) {
@@ -57,8 +78,10 @@ final class VideoRenderer {
             let type = NAL.type(nal)
             if type == 7, sps != nal {
                 sps = nal
+                invalidateFormatLocked()
             } else if type == 8, pps != nal {
                 pps = nal
+                invalidateFormatLocked()
             }
         }
 
@@ -145,7 +168,20 @@ final class VideoRenderer {
     }
 
     private func enqueueDecoded(imageBuffer: CVImageBuffer, pts: CMTime, duration: CMTime) {
-        let image = CIImage(cvImageBuffer: imageBuffer)
+        rotationLock.lock()
+        let rotation = displayRotation
+        rotationLock.unlock()
+        var image = CIImage(cvImageBuffer: imageBuffer)
+        switch rotation {
+        case 90:
+            image = image.oriented(.right)
+        case 180:
+            image = image.oriented(.down)
+        case 270:
+            image = image.oriented(.left)
+        default:
+            break
+        }
         guard let frame = ciContext.createCGImage(image, from: image.extent) else {
             emit("无法把解码帧转换为显示图像")
             return

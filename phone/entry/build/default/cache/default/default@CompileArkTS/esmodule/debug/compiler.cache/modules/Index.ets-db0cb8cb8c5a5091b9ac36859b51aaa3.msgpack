@@ -1,630 +1,0 @@
-Ôr@Ÿªassertions¤code´customTransformCache¬dependencies¢id¤meta±moduleSideEffects¬originalCode±originalSourcemap«resolvedIds®sourcemapChainµsyntheticNamedExportsµtransformDependencies®transformFiles¨cacheAstÔrAÚ.Šif (!("finalizeConstruction" in ViewPU.prototype)) {
-    Reflect.set(ViewPU.prototype, "finalizeConstruction", () => { });
-}
-import wantAgent from "@ohos.app.ability.wantAgent";
-import display from "@ohos.display";
-import backgroundTaskManager from "@ohos.resourceschedule.backgroundTaskManager";
-import hilog from "@ohos.hilog";
-import ohscreen from 'libohscreen.so';
-const DOMAIN = 0x3200;
-const PORT = 27183;
-const MAX_SIDE = 1280;
-const FPS = 30;
-const BITRATE = 8000000;
-function even(n) {
-    return n & ~1;
-}
-class Index extends ViewPU {
-    constructor(parent, params, __localStorage, elmtId = -1, paramsLambda = undefined, extraInfo) {
-        super(parent, __localStorage, elmtId, extraInfo);
-        if (typeof paramsLambda === "function") {
-            this.paramsGenerator_ = paramsLambda;
-        }
-        this.__statusText = new ObservedPropertySimplePU('æ­£åœ¨å¯åŠ¨â€¦', this, "statusText");
-        this.__detailText = new ObservedPropertySimplePU('è¯·ç”¨ Mac ç«¯è¿žæŽ¥æœ¬æœº', this, "detailText");
-        this.__running = new ObservedPropertySimplePU(false, this, "running");
-        this.__ticks = new ObservedPropertySimplePU(0, this, "ticks");
-        this.timerId = -1;
-        this.keepAlive = false;
-        this.cancelCb = undefined;
-        this.setInitiallyProvidedValue(params);
-        this.finalizeConstruction();
-    }
-    setInitiallyProvidedValue(params) {
-        if (params.statusText !== undefined) {
-            this.statusText = params.statusText;
-        }
-        if (params.detailText !== undefined) {
-            this.detailText = params.detailText;
-        }
-        if (params.running !== undefined) {
-            this.running = params.running;
-        }
-        if (params.ticks !== undefined) {
-            this.ticks = params.ticks;
-        }
-        if (params.timerId !== undefined) {
-            this.timerId = params.timerId;
-        }
-        if (params.keepAlive !== undefined) {
-            this.keepAlive = params.keepAlive;
-        }
-        if (params.cancelCb !== undefined) {
-            this.cancelCb = params.cancelCb;
-        }
-    }
-    updateStateVars(params) {
-    }
-    purgeVariableDependenciesOnElmtId(rmElmtId) {
-        this.__statusText.purgeDependencyOnElmtId(rmElmtId);
-        this.__detailText.purgeDependencyOnElmtId(rmElmtId);
-        this.__running.purgeDependencyOnElmtId(rmElmtId);
-        this.__ticks.purgeDependencyOnElmtId(rmElmtId);
-    }
-    aboutToBeDeleted() {
-        this.__statusText.aboutToBeDeleted();
-        this.__detailText.aboutToBeDeleted();
-        this.__running.aboutToBeDeleted();
-        this.__ticks.aboutToBeDeleted();
-        SubscriberManager.Get().delete(this.id__());
-        this.aboutToBeDeletedInternal();
-    }
-    get statusText() {
-        return this.__statusText.get();
-    }
-    set statusText(newValue) {
-        this.__statusText.set(newValue);
-    }
-    get detailText() {
-        return this.__detailText.get();
-    }
-    set detailText(newValue) {
-        this.__detailText.set(newValue);
-    }
-    get running() {
-        return this.__running.get();
-    }
-    set running(newValue) {
-        this.__running.set(newValue);
-    }
-    get ticks() {
-        return this.__ticks.get();
-    }
-    set ticks(newValue) {
-        this.__ticks.set(newValue);
-    }
-    aboutToAppear() {
-        this.cancelCb = (info) => {
-            hilog.error(DOMAIN, 'OHScreen', `continuous task cancelled ${info.reason}`);
-            this.keepAlive = false;
-            if (this.running) {
-                this.startKeepAlive();
-            }
-        };
-        try {
-            backgroundTaskManager.on('continuousTaskCancel', this.cancelCb);
-        }
-        catch (err) {
-            hilog.error(DOMAIN, 'OHScreen', 'on continuousTaskCancel failed');
-        }
-        this.startService();
-        this.timerId = setInterval(() => {
-            this.ticks += 1;
-            this.refreshState();
-        }, 500);
-    }
-    aboutToDisappear() {
-        if (this.timerId >= 0) {
-            clearInterval(this.timerId);
-            this.timerId = -1;
-        }
-        if (this.cancelCb !== undefined) {
-            try {
-                backgroundTaskManager.off('continuousTaskCancel', this.cancelCb);
-            }
-            catch (err) {
-                hilog.error(DOMAIN, 'OHScreen', 'off continuousTaskCancel failed');
-            }
-            this.cancelCb = undefined;
-        }
-    }
-    abilityContext() {
-        try {
-            return getContext(this);
-        }
-        catch (err) {
-            hilog.error(DOMAIN, 'OHScreen', 'getContext failed');
-            return undefined;
-        }
-    }
-    async startKeepAlive() {
-        if (this.keepAlive) {
-            return;
-        }
-        const context = this.abilityContext();
-        if (context === undefined) {
-            return;
-        }
-        const info = {
-            wants: [
-                {
-                    bundleName: context.abilityInfo.bundleName,
-                    abilityName: context.abilityInfo.name
-                }
-            ],
-            actionType: wantAgent.OperationType.START_ABILITY,
-            requestCode: 0,
-            actionFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
-        };
-        try {
-            const agent = await wantAgent.getWantAgent(info);
-            await backgroundTaskManager.startBackgroundRunning(context, ['dataTransfer'], agent);
-            this.keepAlive = true;
-            hilog.info(DOMAIN, 'OHScreen', 'background running started');
-        }
-        catch (err) {
-            const e = err;
-            hilog.error(DOMAIN, 'OHScreen', `startBackgroundRunning ${e.code} ${e.message}`);
-        }
-    }
-    async stopKeepAlive() {
-        if (!this.keepAlive) {
-            return;
-        }
-        const context = this.abilityContext();
-        if (context === undefined) {
-            return;
-        }
-        try {
-            await backgroundTaskManager.stopBackgroundRunning(context);
-            hilog.info(DOMAIN, 'OHScreen', 'background running stopped');
-        }
-        catch (err) {
-            const e = err;
-            hilog.error(DOMAIN, 'OHScreen', `stopBackgroundRunning ${e.code} ${e.message}`);
-        }
-        this.keepAlive = false;
-    }
-    scaledSize() {
-        try {
-            const d = display.getDefaultDisplaySync();
-            let w = d.width;
-            let h = d.height;
-            const longest = Math.max(w, h);
-            if (longest > MAX_SIDE) {
-                const scale = MAX_SIDE / longest;
-                w = Math.floor(w * scale);
-                h = Math.floor(h * scale);
-            }
-            return [even(w), even(h), d.id];
-        }
-        catch (err) {
-            return [720, 1280, 0];
-        }
-    }
-    startService() {
-        const size = this.scaledSize();
-        const rc = ohscreen.startServer(PORT, size[0], size[1], FPS, BITRATE, size[2]);
-        this.running = rc === 0;
-        if (rc === 0) {
-            this.statusText = 'ç­‰å¾… Mac è¿žæŽ¥';
-            this.detailText = `ç«¯å£ ${PORT} Â· ${size[0]}Ã—${size[1]} Â· è¿žæŽ¥åŽè¯·å…è®¸æ•´å±å½•åˆ¶`;
-        }
-        else {
-            this.statusText = 'å¯åŠ¨å¤±è´¥';
-            this.detailText = `startServer è¿”å›ž ${rc}`;
-        }
-    }
-    stopService() {
-        ohscreen.stopServer();
-        this.stopKeepAlive();
-        this.running = false;
-        this.statusText = 'å·²åœæ­¢';
-        this.detailText = 'å¯ç‚¹ã€Œå¼€å§‹ç­‰å¾…ã€å†æ¬¡ç›‘å¬';
-    }
-    refreshState() {
-        if (!this.running) {
-            return;
-        }
-        const s = ohscreen.getState();
-        if (s === 1) {
-            this.statusText = 'ç­‰å¾… Mac è¿žæŽ¥';
-        }
-        else if (s === 2) {
-            this.statusText = 'æ­£åœ¨æŠ•å±';
-            this.detailText = 'æŽˆæƒåŽè¯·æ»‘å›žæ¡Œé¢æˆ–æ‰“å¼€å…¶å®ƒ Appã€‚ä¸è¦åœåœ¨æœ¬é¡µï¼Œä¹Ÿä¸è¦ç”¨åˆ†å±æŠŠ OHScreen ç•™åœ¨å±å¹•ä¸Šã€‚';
-            this.startKeepAlive();
-        }
-        else if (s === 3) {
-            this.statusText = 'å½•å±æ²¡å¯åŠ¨';
-            this.detailText = 'æŽˆæƒè¢«å–æ¶ˆï¼Œæˆ–é‡‡é›†å¯åŠ¨å¤±è´¥ã€‚è¯·åœ¨ Mac å†ç‚¹è¿žæŽ¥ï¼Œå¼¹çª—é‡Œé€‰ã€Œå±å¹•ã€å¹¶å…è®¸ã€‚';
-        }
-    }
-    initialRender() {
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Column.create();
-            Column.width('100%');
-            Column.height('100%');
-            Column.padding({ top: 80, bottom: 48 });
-            Column.backgroundColor({ "id": 16777222, "type": 10001, params: [], "bundleName": "com.ohscreen.server", "moduleName": "entry" });
-        }, Column);
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create('OHScreen');
-            Text.fontSize(28);
-            Text.fontWeight(FontWeight.Bold);
-            Text.fontColor('#E5E7EB');
-            Text.margin({ bottom: 8 });
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(this.statusText);
-            Text.fontSize(20);
-            Text.fontColor('#2EC4B6');
-            Text.margin({ bottom: 12 });
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(this.detailText);
-            Text.fontSize(14);
-            Text.fontColor('#9CA3AF');
-            Text.textAlign(TextAlign.Center);
-            Text.padding({ left: 24, right: 24 });
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Text.create(`${Math.floor(this.ticks / 2)}s`);
-            Text.fontSize(12);
-            Text.fontColor('#6B7280');
-            Text.margin({ top: 16 });
-        }, Text);
-        Text.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            Blank.create();
-        }, Blank);
-        Blank.pop();
-        this.observeComponentCreation2((elmtId, isInitialRender) => {
-            If.create();
-            if (this.running) {
-                this.ifElseBranchUpdateFunction(0, () => {
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
-                        Button.createWithLabel('åœæ­¢');
-                        Button.width('60%');
-                        Button.backgroundColor('#374151');
-                        Button.onClick(() => {
-                            this.stopService();
-                        });
-                    }, Button);
-                    Button.pop();
-                });
-            }
-            else {
-                this.ifElseBranchUpdateFunction(1, () => {
-                    this.observeComponentCreation2((elmtId, isInitialRender) => {
-                        Button.createWithLabel('å¼€å§‹ç­‰å¾…');
-                        Button.width('60%');
-                        Button.backgroundColor('#2EC4B6');
-                        Button.fontColor('#111827');
-                        Button.onClick(() => {
-                            this.startService();
-                        });
-                    }, Button);
-                    Button.pop();
-                });
-            }
-        }, If);
-        If.pop();
-        Column.pop();
-    }
-    rerender() {
-        this.updateDirtyElements();
-    }
-    static getEntryName() {
-        return "Index";
-    }
-}
-registerNamedRoute(() => new Index(undefined, {}), "", { bundleName: "com.ohscreen.server", moduleName: "entry", pagePath: "pages/Index", pageFullPath: "entry/src/main/ets/pages/Index", integratedHsp: "false", moduleType: "followWithHap" });
-//# sourceMappingURL=Index.js.mapÂ•Ùx hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.app.ability.wantAgent.d.tsÙj hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.display.d.tsÙ‰ hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.resourceschedule.backgroundTaskManager.d.tsÙh hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.hilog.d.ts½ hvigor_ignore_libohscreen.soÙK/Users/wangjin/wj/harmonyOS_screen/phone/entry/src/main/ets/pages/Index.etsÔrB›ªmoduleName±isLocalDependency¯isNodeEntryFile§pkgPath±belongProjectPath§pkgNameªpkgVersion±dependencyPkgInfo°belongModulePath§checker¬shouldEmitJs¥entryÃÂÙ./Users/wangjin/wj/harmonyOS_screen/phone/entryÙ(/Users/wangjin/wj/harmonyOS_screen/phone¥entry¥1.0.0Ô  Ù./Users/wangjin/wj/harmonyOS_screen/phone/entryÔrCÜ ®¬getNodeCount²getIdentifierCount®getSymbolCount¬getTypeCountµgetInstantiationCountµgetRelationCacheSizes±isUndefinedSymbol±isArgumentsSymbol¯isUnknownSymbol¯getMergedSymbol®getDiagnostics´getGlobalDiagnostics´getRecursionIdentity¶getUnmatchedProperties¹getTypeOfSymbolAtLocation¯getTypeOfSymbolÙ(getSymbolsOfParameterPropertyDeclaration·getDeclaredTypeOfSymbol³getPropertiesOfType±getPropertyOfTypeÙ"getPrivateIdentifierPropertyOfType·getTypeOfPropertyOfType²getIndexInfoOfType³getIndexInfosOfTypeºgetIndexInfosOfIndexSymbol³getSignaturesOfType²getIndexTypeOfType¬getIndexType¬getBaseTypes¸getBaseTypeOfLiteralType®getWidenedType³getTypeFromTypeNode°getParameterTypeÙ$getParameterIdentifierNameAtPosition¸getPromisedTypeOfPromise®getAwaitedType¸getReturnTypeOfSignature®isNullableType¯getNullableType²getNonNullableType²getNonOptionalType°getTypeArguments®typeToTypeNodeÙ$indexInfoToIndexSignatureDeclaration¿signatureToSignatureDeclaration²symbolToEntityName²symbolToExpression¬symbolToNodeÙ!symbolToTypeParameterDeclarations¼symbolToParameterDeclarationºtypeParameterToDeclaration±getSymbolsInScope³getSymbolAtLocation·getIndexInfosAtLocationÙ!getShorthandAssignmentValueSymbolÙ#getExportSpecifierLocalTargetSymbol·getExportSymbolOfSymbol±getTypeAtLocationÙ tryGetTypeAtLocationWithoutCheckºgetTypeOfAssignmentPatternÙ*getPropertySymbolOfDestructuringAssignment±signatureToString¬typeToString®symbolToStringµtypePredicateToString®writeSignature©writeType«writeSymbol²writeTypePredicate¼getAugmentedPropertiesOfType®getRootSymbols²getSymbolOfExpando±getContextualTypeÙ(getContextualTypeForObjectLiteralElementÙ#getContextualTypeForArgumentAtIndexÙ getContextualTypeForJsxAttribute²isContextSensitiveÙ!getTypeOfPropertyOfContextualTypeµgetFullyQualifiedNameÙ#tryGetResolvedSignatureWithoutCheck´getResolvedSignatureÙ/getResolvedSignatureForStringLiteralCompletionsÙ$getResolvedSignatureForSignatureHelpµgetExpandedParameters¹hasEffectiveRestParameterºcontainsArgumentsReference°getConstantValueµisValidPropertyAccessÙ#isValidPropertyAccessForCompletions»getSignatureFromDeclarationºisImplementationOfOverload¹getImmediateAliasedSymbol°getAliasedSymbol¯getEmitResolver²getExportsOfModule¿getExportsAndPropertiesOfModuleÙ forEachExportAndPropertyOfModule¯getSymbolWalker±getAmbientModules¹getJsxIntrinsicTagNamesAt³isOptionalParameter»tryGetMemberInModuleExportsÙ(tryGetMemberInModuleExportsAndProperties´tryFindAmbientModuleÙ(tryFindAmbientModuleWithoutAugmentations¯getApparentType¬getUnionType²isTypeAssignableTo³createAnonymousType¯createSignature¬createSymbol¯createIndexInfoªgetAnyType­getStringType­getNumberType±createPromiseType¯createArrayType¹getElementTypeOfArrayType®getBooleanType¬getFalseType«getTrueType«getVoidType°getUndefinedType«getNullType¯getESSymbolType¬getNeverType¯getOptionalType®getPromiseType²getPromiseLikeType´getAsyncIterableType²isSymbolAccessible«isArrayType«isTupleType¯isArrayLikeTypeÙ#isTypeInvalidDueToUnionDiscriminantºgetExactOptionalProperties¿getAllPossiblePropertiesOfTypesÙ(getSuggestedSymbolForNonexistentPropertyÙ#getSuggestionForNonexistentPropertyÙ,getSuggestedSymbolForNonexistentJSXAttributeÙ&getSuggestedSymbolForNonexistentSymbolÙ!getSuggestionForNonexistentSymbolÙ&getSuggestedSymbolForNonexistentModuleÙ!getSuggestionForNonexistentExportÙ+getSuggestedSymbolForNonexistentClassMember·getBaseConstraintOfType»getDefaultFromTypeParameter«resolveName¯getJsxNamespaceµgetJsxFragmentFactory¸getAccessibleSymbolChain»getTypePredicateOfSignature¹resolveExternalModuleName»resolveExternalModuleSymbol°tryGetThisTypeAt¹getTypeArgumentConstraint¸getSuggestionDiagnostics¸runWithCancellationTokenÙ3getLocalTypeParametersOfClassOrInterfaceOrTypeAlias´isDeclarationVisible´isPropertyAccessible»getTypeOnlyAliasDeclaration¿getMemberOverrideModifierStatusÙ!isTypeParameterPossiblyReferenced²getConstEnumRelate´clearConstEnumRelateµdeleteConstEnumRelateÙ$getTypeArgumentsForResolvedSignatureµgetCheckedSourceFilesÙ"collectHaveTsNoCheckFilesForLinter·clearQualifiedNameCache®isStaticRecord²isStaticSourceFile³createIntrinsicTypeÔ  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  Ô  ÃÃÚXimport { common, wantAgent, WantAgent } from '@kit.AbilityKit';
-import { display } from '@kit.ArkUI';
-import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
-import { BusinessError } from '@kit.BasicServicesKit';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import ohscreen from 'libohscreen.so';
-
-const DOMAIN = 0x3200;
-const PORT = 27183;
-const MAX_SIDE = 1280;
-const FPS = 30;
-const BITRATE = 8_000_000;
-
-function even(n: number): number {
-  return n & ~1;
-}
-
-@Entry
-@Component
-struct Index {
-  @State statusText: string = 'æ­£åœ¨å¯åŠ¨â€¦';
-  @State detailText: string = 'è¯·ç”¨ Mac ç«¯è¿žæŽ¥æœ¬æœº';
-  @State running: boolean = false;
-  @State ticks: number = 0;
-  private timerId: number = -1;
-  private keepAlive: boolean = false;
-  private cancelCb: ((info: backgroundTaskManager.ContinuousTaskCancelInfo) => void) | undefined = undefined;
-
-  aboutToAppear(): void {
-    this.cancelCb = (info: backgroundTaskManager.ContinuousTaskCancelInfo): void => {
-      hilog.error(DOMAIN, 'OHScreen', `continuous task cancelled ${info.reason}`);
-      this.keepAlive = false;
-      if (this.running) {
-        this.startKeepAlive();
-      }
-    };
-    try {
-      backgroundTaskManager.on('continuousTaskCancel', this.cancelCb);
-    } catch (err) {
-      hilog.error(DOMAIN, 'OHScreen', 'on continuousTaskCancel failed');
-    }
-    this.startService();
-    this.timerId = setInterval((): void => {
-      this.ticks += 1;
-      this.refreshState();
-    }, 500);
-  }
-
-  aboutToDisappear(): void {
-    if (this.timerId >= 0) {
-      clearInterval(this.timerId);
-      this.timerId = -1;
-    }
-    if (this.cancelCb !== undefined) {
-      try {
-        backgroundTaskManager.off('continuousTaskCancel', this.cancelCb);
-      } catch (err) {
-        hilog.error(DOMAIN, 'OHScreen', 'off continuousTaskCancel failed');
-      }
-      this.cancelCb = undefined;
-    }
-  }
-
-  private abilityContext(): common.UIAbilityContext | undefined {
-    try {
-      return getContext(this) as common.UIAbilityContext;
-    } catch (err) {
-      hilog.error(DOMAIN, 'OHScreen', 'getContext failed');
-      return undefined;
-    }
-  }
-
-  private async startKeepAlive(): Promise<void> {
-    if (this.keepAlive) {
-      return;
-    }
-    const context = this.abilityContext();
-    if (context === undefined) {
-      return;
-    }
-    const info: wantAgent.WantAgentInfo = {
-      wants: [
-        {
-          bundleName: context.abilityInfo.bundleName,
-          abilityName: context.abilityInfo.name
-        }
-      ],
-      actionType: wantAgent.OperationType.START_ABILITY,
-      requestCode: 0,
-      actionFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
-    };
-    try {
-      const agent: WantAgent = await wantAgent.getWantAgent(info);
-      await backgroundTaskManager.startBackgroundRunning(context, ['dataTransfer'], agent);
-      this.keepAlive = true;
-      hilog.info(DOMAIN, 'OHScreen', 'background running started');
-    } catch (err) {
-      const e = err as BusinessError;
-      hilog.error(DOMAIN, 'OHScreen', `startBackgroundRunning ${e.code} ${e.message}`);
-    }
-  }
-
-  private async stopKeepAlive(): Promise<void> {
-    if (!this.keepAlive) {
-      return;
-    }
-    const context = this.abilityContext();
-    if (context === undefined) {
-      return;
-    }
-    try {
-      await backgroundTaskManager.stopBackgroundRunning(context);
-      hilog.info(DOMAIN, 'OHScreen', 'background running stopped');
-    } catch (err) {
-      const e = err as BusinessError;
-      hilog.error(DOMAIN, 'OHScreen', `stopBackgroundRunning ${e.code} ${e.message}`);
-    }
-    this.keepAlive = false;
-  }
-
-  private scaledSize(): [number, number, number] {
-    try {
-      const d = display.getDefaultDisplaySync();
-      let w = d.width;
-      let h = d.height;
-      const longest = Math.max(w, h);
-      if (longest > MAX_SIDE) {
-        const scale = MAX_SIDE / longest;
-        w = Math.floor(w * scale);
-        h = Math.floor(h * scale);
-      }
-      return [even(w), even(h), d.id];
-    } catch (err) {
-      return [720, 1280, 0];
-    }
-  }
-
-  private startService(): void {
-    const size = this.scaledSize();
-    const rc = ohscreen.startServer(PORT, size[0], size[1], FPS, BITRATE, size[2]);
-    this.running = rc === 0;
-    if (rc === 0) {
-      this.statusText = 'ç­‰å¾… Mac è¿žæŽ¥';
-      this.detailText = `ç«¯å£ ${PORT} Â· ${size[0]}Ã—${size[1]} Â· è¿žæŽ¥åŽè¯·å…è®¸æ•´å±å½•åˆ¶`;
-    } else {
-      this.statusText = 'å¯åŠ¨å¤±è´¥';
-      this.detailText = `startServer è¿”å›ž ${rc}`;
-    }
-  }
-
-  private stopService(): void {
-    ohscreen.stopServer();
-    this.stopKeepAlive();
-    this.running = false;
-    this.statusText = 'å·²åœæ­¢';
-    this.detailText = 'å¯ç‚¹ã€Œå¼€å§‹ç­‰å¾…ã€å†æ¬¡ç›‘å¬';
-  }
-
-  private refreshState(): void {
-    if (!this.running) {
-      return;
-    }
-    const s = ohscreen.getState();
-    if (s === 1) {
-      this.statusText = 'ç­‰å¾… Mac è¿žæŽ¥';
-    } else if (s === 2) {
-      this.statusText = 'æ­£åœ¨æŠ•å±';
-      this.detailText = 'æŽˆæƒåŽè¯·æ»‘å›žæ¡Œé¢æˆ–æ‰“å¼€å…¶å®ƒ Appã€‚ä¸è¦åœåœ¨æœ¬é¡µï¼Œä¹Ÿä¸è¦ç”¨åˆ†å±æŠŠ OHScreen ç•™åœ¨å±å¹•ä¸Šã€‚';
-      this.startKeepAlive();
-    } else if (s === 3) {
-      this.statusText = 'å½•å±æ²¡å¯åŠ¨';
-      this.detailText = 'æŽˆæƒè¢«å–æ¶ˆï¼Œæˆ–é‡‡é›†å¯åŠ¨å¤±è´¥ã€‚è¯·åœ¨ Mac å†ç‚¹è¿žæŽ¥ï¼Œå¼¹çª—é‡Œé€‰ã€Œå±å¹•ã€å¹¶å…è®¸ã€‚';
-    }
-  }
-
-  build() {
-    Column() {
-      Text('OHScreen')
-        .fontSize(28)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#E5E7EB')
-        .margin({ bottom: 8 })
-      Text(this.statusText)
-        .fontSize(20)
-        .fontColor('#2EC4B6')
-        .margin({ bottom: 12 })
-      Text(this.detailText)
-        .fontSize(14)
-        .fontColor('#9CA3AF')
-        .textAlign(TextAlign.Center)
-        .padding({ left: 24, right: 24 })
-      Text(`${Math.floor(this.ticks / 2)}s`)
-        .fontSize(12)
-        .fontColor('#6B7280')
-        .margin({ top: 16 })
-      Blank()
-      if (this.running) {
-        Button('åœæ­¢')
-          .width('60%')
-          .backgroundColor('#374151')
-          .onClick(() => {
-            this.stopService();
-          })
-      } else {
-        Button('å¼€å§‹ç­‰å¾…')
-          .width('60%')
-          .backgroundColor('#2EC4B6')
-          .fontColor('#111827')
-          .onClick(() => {
-            this.startService();
-          })
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .padding({ top: 80, bottom: 48 })
-    .backgroundColor($r('app.color.page_background'))
-  }
-}
-ÀÔrD•»@ohos.app.ability.wantAgent­@ohos.displayÙ,@ohos.resourceschedule.backgroundTaskManager«@ohos.hilog®libohscreen.soÔrE—ªassertions¨external¢id¤meta±moduleSideEffectsªresolvedByµsyntheticNamedExportsAÃÙx hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.app.ability.wantAgent.d.tsÔrF‘¯hostModulesInfo‘ÔrG’²hostDependencyName®hostModuleName»@ohos.app.ability.wantAgent¥entryÃªoh-resolveÂEAÃÙj hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.display.d.tsF‘G­@ohos.display¥entryÃªoh-resolveÂEAÃÙ‰ hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.resourceschedule.backgroundTaskManager.d.tsF‘GÙ,@ohos.resourceschedule.backgroundTaskManager¥entryÃªoh-resolveÂEAÃÙh hvigor_ignore__Applications_DevEco-Studio.app_Contents_sdk_default_openharmony_ets_api_@ohos.hilog.d.tsAÃªoh-resolveÂEAÃ½ hvigor_ignore_libohscreen.soF‘G®libohscreen.so¥entryÃªoh-resolveÂ“ÔrH–§version¤fileªsourceRoot§sources¥names¨mappings¨Index.js ‘©Index.etsÜ=–”    ”  ”  ”  -”3  >”4  ?–”   ” 	” ” ”# $”$ %–”   ” 	” ”" &”ÌP ?”ÌQ Ì@–”   ” 	” ” ” 3”  4–”   ” ” ” ”% %”& &–”   ” ” ” ” ” –”   ” ”
- 
-” ” ” –”  	 ” 	” 	” 	” 	” 	–”  
- ” 
-”	 
-	” 
-” 
-” 
-–”   ” ” ” ” ” •”   ”	 	” ” ” —” ” 	” 
-” ” ” ” ’”   ” ’” ” ‘”  ’”9 ”Ì@ %’”9 ”ÌG ,’”6 ”; !’”4 ”5 “” ” ” ’” ” $’” Ìc”! Ìl‘” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ’” 	” ’” ” ™” ” ” 	” ” ” ” ÌI” ÌQ”! ÌSÜ ” ” ” ” ” ” ”  ”* $”, &”ÌI ÌC”ÌM ÌG”ÌN ÌH”ÌT ÌN”ÌV ÌP”ÌW ÌQ”ÌX ÌR—” ” 
-” ” ” ”" ”# –”  ”  
-”  ”  ”  ”  –” !” !” !”# !”% !”& !‘” "“” #”	 #”
- #’” $” $œ” %”! %”" %”$ %”% %”; %5”= %7”ÌA %;”ÌB %<”ÌJ %ÌD”ÌK %ÌE”ÌL %ÌF‘”	 &”” &” &” &” &œ” '” '” '” '” '” '”  '”* '$”, '&”ÌL 'ÌF”ÌM 'ÌG”ÌN 'ÌH‘”	 (–” )” )” )	” )” )” )™” *” *” *	” *” *”" *”# *”& *(”( **—” +” +
-” +” +” +” +” +–” ,” ,
-” ,” ,” ,”  ,–” -”	 -” -” -
-” -” -’” .” .’” 0” 0˜” 1” 1” 1” 1” 1” 1” 1” 1˜” 2” 2” 2” 2” 2”& 2 ”' 2!”( 2"˜” 3” 3
-” 3” 3” 3” 3” 3” 3‘”	 4˜” 5” 5” 5” 5” 5” 5”' 5#”) 5%’” 6” 6
-œ” 7”% 7”& 7”) 7!”* 7"”Ì@ 78”ÌB 7:”ÌF 7>”ÌG 7?”ÌO 7ÌG”ÌP 7ÌH”ÌQ 7ÌI‘” 8”” 8” 8” 8” 8œ” 9” 9” 9” 9” 9”" 9”$ 9”. 9&”0 9(”ÌQ 9ÌI”ÌR 9ÌJ”ÌS 9ÌK‘” :—” ;” ;
-” ;” ;” ;”% ;”& ; ‘”	 <’” =” =’” ?
-” ?’” Ì@” Ì@—” ÌA” ÌA” ÌA” ÌA”" ÌA”# ÌA8”$ ÌA9‘”	 ÌB”” ÌB” ÌB” ÌB” ÌBœ” ÌC” ÌC” ÌC” ÌC” ÌC” ÌC”  ÌC”* ÌC$”, ÌC&”? ÌC9”Ì@ ÌC:”ÌA ÌC;”” ÌD” ÌD” ÌD” ÌD‘”	 ÌE’” ÌF” ÌF”” ÌH
-”	 ÌH”
- ÌH” ÌH–” ÌI” ÌI” ÌI” ÌI” ÌI” ÌI’” ÌJ” ÌJ‘”	 ÌK™” ÌL” ÌL
-” ÌL” ÌL” ÌL” ÌL”+ ÌL'”- ÌL)”. ÌL*–” ÌM” ÌM” ÌM” ÌM”! ÌM”# ÌM’” ÌN” ÌN‘”	 ÌO”” ÌP” ÌP
-” ÌP” ÌP*“” ÌQ” ÌQ” ÌQ‘” ÌR˜” ÌS
-” ÌS”  ÌS”' ÌS”( ÌS”3 ÌS)”4 ÌS*”> ÌS4˜” ÌT
-” ÌT”! ÌT”( ÌT”) ÌT”4 ÌT*”5 ÌT+”9 ÌT/‘” ÌU	‘” ÌV˜” ÌW” ÌW” ÌW”! ÌW”" ÌW”/ ÌW)”0 ÌW*”= ÌW7”” ÌX” ÌX” ÌX” ÌXš” ÌY” ÌY” ÌY” ÌY”# ÌY”$ ÌY”2 ÌY,”3 ÌY-”ÌF ÌYÌ@”ÌG ÌYÌA’”	 ÌZ”
- ÌZ’” Ì[” Ì[œ” Ì\” Ì\” Ì\” Ì\”  Ì\%”) Ì\.”* Ì\/”6 Ì\;”7 Ì\<”; Ì\Ì@”< Ì\ÌA”= Ì\ÌBŸ” Ì]” Ì]”' Ì]!”( Ì]"”> Ì]8”? Ì]9”ÌF Ì]Ì@”ÌH Ì]ÌB”ÌI Ì]ÌC”ÌW Ì]ÌQ”ÌX Ì]ÌR”ÌZ Ì]ÌT”Ì_ Ì]ÌY”Ì` Ì]ÌZ”Ìa Ì]Ì[—” Ì^” Ì^
-” Ì^” Ì^” Ì^”! Ì^”" Ì^œ” Ì_” Ì_” Ì_” Ì_” Ì_” Ì_” Ì_”) Ì_#”+ Ì_%”ÌG Ì_ÌA”ÌH Ì_ÌB”ÌI Ì_ÌC‘”	 Ì`”” Ì`” Ì`” Ì`” Ì`–” Ìa” Ìa” Ìa” Ìa” Ìa$” Ìa%Ü ” Ìb” Ìb” Ìb” Ìb” Ìb” Ìb”  Ìb”* Ìb$”, Ìb&”ÌF ÌbÌ@”ÌG ÌbÌA”ÌH ÌbÌB”ÌL ÌbÌF”ÌP ÌbÌJ”ÌQ ÌbÌK”ÌR ÌbÌL”ÌY ÌbÌS”Ì[ ÌbÌU”Ì\ ÌbÌV”Ì] ÌbÌW‘”	 Ìc’” Ìd” Ìd”” Ìf
-”	 Ìf”
- Ìf” Ìf—” Ìg” Ìg” Ìg	” Ìg” Ìg” Ìg” Ìg’” Ìh” Ìh‘”	 Ìi™” Ìj” Ìj
-” Ìj” Ìj” Ìj” Ìj”+ Ìj'”- Ìj)”. Ìj*–” Ìk” Ìk” Ìk” Ìk”! Ìk”# Ìk’” Ìl” Ìl‘”	 Ìm’” Ìn” Ìn™” Ìo” Ìo”' Ìo!”( Ìo"”= Ìo7”> Ìo8”ÌE Ìo?”ÌF ÌoÌ@”ÌG ÌoÌAœ” Ìp” Ìp” Ìp” Ìp” Ìp” Ìp” Ìp”) Ìp#”+ Ìp%”ÌG ÌpÌA”ÌH ÌpÌB”ÌI ÌpÌC‘”	 Ìq”” Ìq” Ìq” Ìq” Ìq–” Ìr” Ìr” Ìr” Ìr” Ìr$” Ìr%Ü ” Ìs” Ìs” Ìs” Ìs” Ìs” Ìs”  Ìs”* Ìs$”, Ìs&”ÌE Ìs?”ÌF ÌsÌ@”ÌG ÌsÌA”ÌK ÌsÌE”ÌO ÌsÌI”ÌP ÌsÌJ”ÌQ ÌsÌK”ÌX ÌsÌR”ÌZ ÌsÌT”Ì[ ÌsÌU”Ì\ ÌsÌV‘”	 Ìt—” Ìu” Ìu” Ìu	” Ìu” Ìu” Ìu” Ìu’” Ìv” Ìv’” Ìx
-” Ìx’” Ìy” Ìy™” Ìz” Ìz” Ìz” Ìz” Ìz” Ìz”3 Ìz-”5 Ìz/”6 Ìz0˜” Ì{” Ì{
-” Ì{” Ì{” Ì{” Ì{” Ì{” Ì{˜” Ì|” Ì|
-” Ì|” Ì|” Ì|” Ì|” Ì|” Ì|” Ì}” Ì}” Ì}” Ì}”  Ì}”! Ì}”$ Ì}”% Ì}”& Ì} ”( Ì}"”) Ì}#”* Ì}$”+ Ì}%–” Ì~” Ì~
-” Ì~” Ì~”" Ì~”$ Ì~˜” Ì” Ì” Ì” Ì”& Ì”) Ì!”0 Ì(”1 Ì)œ” Ì€” Ì€	” Ì€” Ì€” Ì€” Ì€” Ì€”  Ì€”# Ì€”( Ì€ ”) Ì€!”* Ì€"œ” Ì” Ì	” Ì” Ì” Ì” Ì” Ì”  Ì”# Ì”( Ì ”) Ì!”* Ì"‘” Ì‚Ü ” Ìƒ” Ìƒ” Ìƒ” Ìƒ” Ìƒ” Ìƒ” Ìƒ” Ìƒ”! Ìƒ”" Ìƒ”# Ìƒ”$ Ìƒ”& Ìƒ ”' Ìƒ!”( Ìƒ"”* Ìƒ$”+ Ìƒ%”, Ìƒ&‘”	 Ì„”” Ì„” Ì„” Ì„” Ì„š” Ì…” Ì…” Ì…” Ì…” Ì…” Ì…” Ì…”  Ì…”! Ì…”" Ì…‘”	 Ì†’” Ì‡” Ì‡’” Ì‰
-” Ì‰™” ÌŠ” ÌŠ
-” ÌŠ” ÌŠ” ÌŠ” ÌŠ”$ ÌŠ ”& ÌŠ"”' ÌŠ#Ü ” Ì‹” Ì‹
-” Ì‹” Ì‹” Ì‹” Ì‹”' Ì‹#”( Ì‹$”, Ì‹(”. Ì‹*”2 Ì‹.”3 Ì‹/”4 Ì‹0”5 Ì‹1”7 Ì‹3”; Ì‹7”< Ì‹8”= Ì‹9”> Ì‹:”Ì@ Ì‹<”ÌC Ì‹?”ÌE Ì‹ÌA”ÌL Ì‹ÌH”ÌN Ì‹ÌJ”ÌR Ì‹ÌN”ÌS Ì‹ÌO”ÌT Ì‹ÌP”ÌU Ì‹ÌQ”ÌV Ì‹ÌR”ÌW Ì‹ÌS™” ÌŒ” ÌŒ” ÌŒ	” ÌŒ” ÌŒ” ÌŒ” ÌŒ” ÌŒ”  ÌŒ–” Ì” Ì” Ì
-” Ì” Ì” Ì—” ÌŽ” ÌŽ
-” ÌŽ” ÌŽ” ÌŽ”) ÌŽ#”* ÌŽ$Ü ” Ì” Ì
-” Ì” Ì” Ì”$ Ì”( Ì"”. Ì(”2 Ì,”3 Ì-”4 Ì.”5 Ì/”9 Ì3”= Ì7”> Ì8”? Ì9”Ì@ Ì:”ÌO ÌÌI”ÌP ÌÌJ‘”	 Ì‘” Ì—” Ì‘” Ì‘
-” Ì‘” Ì‘” Ì‘”$ Ì‘”% Ì‘™” Ì’” Ì’
-” Ì’” Ì’” Ì’”0 Ì’*”2 Ì’,”4 Ì’.”5 Ì’/‘”	 Ì“’” Ì”” Ì”’” Ì–
-” Ì––” Ì—” Ì—” Ì—” Ì—” Ì—” Ì—–” Ì˜” Ì˜” Ì˜	” Ì˜” Ì˜” Ì˜—” Ì™” Ì™” Ì™	” Ì™” Ì™” Ì™” Ì™—” Ìš” Ìš” Ìš	” Ìš” Ìš” Ìš”  Ìš—” Ì›” Ì›” Ì›	” Ì›” Ì›”( Ì›$”) Ì›%’” Ìœ” Ìœ’” Ìž
-” Ìž—” ÌŸ” ÌŸ” ÌŸ	” ÌŸ” ÌŸ” ÌŸ” ÌŸ’” Ì ” Ì ‘”	 Ì¡™” Ì¢” Ì¢
-” Ì¢” Ì¢” Ì¢” Ì¢”# Ì¢”% Ì¢!”& Ì¢"–” Ì£” Ì£” Ì£	” Ì£” Ì£” Ì£—” Ì¤” Ì¤
-” Ì¤” Ì¤” Ì¤”) Ì¤#”* Ì¤$‘”	 Ì¥–” Ì¥” Ì¥” Ì¥” Ì¥” Ì¥” Ì¥—” Ì¦” Ì¦
-” Ì¦” Ì¦” Ì¦”$ Ì¦”% Ì¦—” Ì§” Ì§
-” Ì§” Ì§” Ì§”ÌP Ì§ÌJ”ÌQ Ì§ÌK–” Ì¨” Ì¨
-” Ì¨” Ì¨”! Ì¨”" Ì¨‘”	 Ì©–” Ì©” Ì©” Ì©” Ì©” Ì©” Ì©—” Ìª” Ìª
-” Ìª” Ìª” Ìª”% Ìª”& Ìª —” Ì«” Ì«
-” Ì«” Ì«” Ì«”ÌF Ì«Ì@”ÌG Ì«ÌA‘”	 Ì¬’” Ì­” Ì­‘” Ì¯’” Ì°” Ì°
-–” Ì°” Ì°
-” ÌÕ” ÌÕ
-” ÌÕ” ÌÕ–” Ì°” Ì°
-” ÌÖ” ÌÖ” ÌÖ”  ÌÖž” Ì°” Ì°
-” Ì×” Ì×” Ì×” Ì×”  Ì×”" Ì×”$ Ì×”& Ì×”, Ì×”. Ì× ”0 Ì×"”2 Ì×$”” Ì°” Ì°
-” ÌØ”" ÌØ”” Ì±” Ì±
-” Ì±”" Ì±–” Ì±” Ì±
-” Ì²	” Ì²” Ì²” Ì²˜” Ì±” Ì±
-” Ì³	” Ì³” Ì³”& Ì³”' Ì³”+ Ì³#–” Ì±” Ì±
-” Ì´	” Ì´” Ì´”$ Ì´š” Ì±” Ì±
-” Ìµ	” Ìµ” Ìµ” Ìµ”  Ìµ”" Ìµ”# Ìµ”% Ìµ’” Ì±” Ì±
-–” Ì¶” Ì¶
-” Ì¶” Ì¶” Ì¶”' Ì¶–” Ì¶” Ì¶
-” Ì·	” Ì·” Ì·” Ì·–” Ì¶” Ì¶
-” Ì¸	” Ì¸” Ì¸”$ Ì¸š” Ì¶” Ì¶
-” Ì¹	” Ì¹” Ì¹” Ì¹”  Ì¹”" Ì¹”$ Ì¹”& Ì¹’” Ì¶” Ì¶
-–” Ìº” Ìº
-” Ìº” Ìº” Ìº”' Ìº–” Ìº” Ìº
-” Ì»	” Ì»” Ì»” Ì»–” Ìº” Ìº
-” Ì¼	” Ì¼” Ì¼”$ Ì¼˜” Ìº” Ìº
-” Ì½	” Ì½” Ì½”$ Ì½”% Ì½”+ Ì½#ž” Ìº” Ìº
-” Ì¾	” Ì¾” Ì¾” Ì¾” Ì¾”! Ì¾”# Ì¾”% Ì¾”* Ì¾"”, Ì¾$”. Ì¾&”0 Ì¾(’” Ìº” Ìº
-Ÿ” Ì¿” Ì¿
-” Ì¿” Ì¿” Ì¿”  Ì¿”% Ì¿”& Ì¿”* Ì¿”+ Ì¿”0 Ì¿#”3 Ì¿&”4 Ì¿'”5 Ì¿(”8 Ì¿+–” Ì¿” Ì¿
-” ÌÀ	” ÌÀ” ÌÀ” ÌÀ–” Ì¿” Ì¿
-” ÌÁ	” ÌÁ” ÌÁ”$ ÌÁš” Ì¿” Ì¿
-” ÌÂ	” ÌÂ” ÌÂ” ÌÂ” ÌÂ” ÌÂ”! ÌÂ”# ÌÂ’” Ì¿” Ì¿
-’” ÌÃ” ÌÃ’” ÌÃ” ÌÃ–” ÌÄ” ÌÄ
-” ÌÄ” ÌÄ” ÌÄ” ÌÄ”” ÌÅ” ÌÅ”/ ÌÅ”3 ÌÅ–” ÌÅ” ÌÅ” ÌÆ”$ ÌÆ”% ÌÆ”* ÌÆ–” ÌÅ” ÌÅ” ÌÇ”. ÌÇ”/ ÌÇ”8 ÌÇ$—” ÌÅ” ÌÅ” ÌÈ”& ÌÈ”' ÌÈ”* ÌÈ”, ÌÈ–” ÌÉ”  ÌÉ”! ÌÉ”, ÌÉ”. ÌÉ”/ ÌÉ’” ÌÊ
-” ÌÊ’” ÌÅ” ÌÅ‘” ÌË‘” ÌË”” ÌÌ” ÌÌ”/ ÌÌ”5 ÌÌ–” ÌÌ” ÌÌ” ÌÍ”$ ÌÍ”% ÌÍ”* ÌÍ–” ÌÌ” ÌÌ” ÌÎ”. ÌÎ”/ ÌÎ”8 ÌÎ$–” ÌÌ” ÌÌ” ÌÏ”( ÌÏ”) ÌÏ”2 ÌÏ—” ÌÌ” ÌÌ” ÌÐ”& ÌÐ”' ÌÐ”* ÌÐ”, ÌÐ–” ÌÑ”  ÌÑ”! ÌÑ”- ÌÑ”/ ÌÑ”0 ÌÑ ’” ÌÒ
-” ÌÒ’” ÌÌ” ÌÌ‘” ÌÓ’” Ì°” Ì°
-‘” ÌÙÔrI–§version¤file§sources®sourcesContent¥names¨mappingsÀ‘À‘ÀÜF‘”    ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”  	 ‘”  
- ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”   ‘”    ‘”  ! ‘”  " ‘”  # ‘”  $ ‘”  % ‘”  & ‘”  ' ‘”  ( ‘”  ) ‘”  * ‘”  + ‘”  , ‘”  - ‘”  . ‘”  / ‘”  0 ‘”  1 ‘”  2 ‘”  3 ‘”  4 ‘”  5 ‘”  6 ‘”  7 ‘”  8 ‘”  9 ‘”  : ‘”  ; ‘”  < ‘”  = ‘”  > ‘”  ? ‘”  Ì@ ‘”  ÌA ‘”  ÌB ‘”  ÌC ‘”  ÌD ‘”  ÌE ‘”  ÌF ‘”  ÌG ‘”  ÌH ‘”  ÌI ‘”  ÌJ ‘”  ÌK ‘”  ÌL ‘”  ÌM ‘”  ÌN ‘”  ÌO ‘”  ÌP ‘”  ÌQ ‘”  ÌR ‘”  ÌS ‘”  ÌT ‘”  ÌU ‘”  ÌV ‘”  ÌW ‘”  ÌX ‘”  ÌY ‘”  ÌZ ‘”  Ì[ ‘”  Ì\ ‘”  Ì] ‘”  Ì^ ‘”  Ì_ ‘”  Ì` ‘”  Ìa ‘”  Ìb ‘”  Ìc ‘”  Ìd ‘”  Ìe ‘”  Ìf ‘”  Ìg ‘”  Ìh ‘”  Ìi ‘”  Ìj ‘”  Ìk ‘”  Ìl ‘”  Ìm ‘”  Ìn ‘”  Ìo ‘”  Ìp ‘”  Ìq ‘”  Ìr ‘”  Ìs ‘”  Ìt ‘”  Ìu ‘”  Ìv ‘”  Ìw ‘”  Ìx ‘”  Ìy ‘”  Ìz ‘”  Ì{ ‘”  Ì| ‘”  Ì} ‘”  Ì~ ‘”  Ì ‘”  Ì€ ‘”  Ì ‘”  Ì‚ ‘”  Ìƒ ‘”  Ì„ ‘”  Ì… ‘”  Ì† ‘”  Ì‡ ‘”  Ìˆ ‘”  Ì‰ ‘”  ÌŠ ‘”  Ì‹ ‘”  ÌŒ ‘”  Ì ‘”  ÌŽ ‘”  Ì ‘”  Ì ‘”  Ì‘ ‘”  Ì’ ‘”  Ì“ ‘”  Ì” ‘”  Ì• ‘”  Ì– ‘”  Ì— ‘”  Ì˜ ‘”  Ì™ ‘”  Ìš ‘”  Ì› ‘”  Ìœ ‘”  Ì ‘”  Ìž ‘”  ÌŸ ‘”  Ì  ‘”  Ì¡ ‘”  Ì¢ ‘”  Ì£ ‘”  Ì¤ ‘”  Ì¥ ‘”  Ì¦ ‘”  Ì§ ‘”  Ì¨ ‘”  Ì© ‘”  Ìª ‘”  Ì« ‘”  Ì¬ ‘”  Ì­ ‘”  Ì® ‘”  Ì¯ ‘”  Ì° ‘”  Ì± ‘”  Ì² ‘”  Ì³ ‘”  Ì´ ‘”  Ìµ ‘”  Ì¶ ‘”  Ì· ‘”  Ì¸ ‘”  Ì¹ ‘”  Ìº ‘”  Ì» ‘”  Ì¼ ‘”  Ì½ ‘”  Ì¾ ‘”  Ì¿ ‘”  ÌÀ ‘”  ÌÁ ‘”  ÌÂ ‘”  ÌÃ ‘”  ÌÄ ‘”  ÌÅ ‘”  ÌÆ ‘”  ÌÇ ‘”  ÌÈ ‘”  ÌÉ ‘”  ÌÊ ‘”  ÌË ‘”  ÌÌ ‘”  ÌÍ ‘”  ÌÎ ‘”  ÌÏ ‘”  ÌÐ ‘”  ÌÑ ‘”  ÌÒ ‘”  ÌÓ ‘”  ÌÔ ‘”  ÌÕ ‘”  ÌÖ ‘”  Ì× ‘”  ÌØ ‘”  ÌÙ ‘”  ÌÚ ‘”  ÌÛ ‘”  ÌÜ ‘”  ÌÝ ‘”  ÌÞ ‘”  Ìß ‘”  Ìà ‘”  Ìá ‘”  Ìâ ‘”  Ìã ‘”  Ìä ‘”  Ìå ‘”  Ìæ ‘”  Ìç ‘”  Ìè ‘”  Ìé ‘”  Ìê ‘”  Ìë ‘”  Ìì ‘”  Ìí ‘”  Ìî ‘”  Ìï ‘”  Ìð ‘”  Ìñ ‘”  Ìò ‘”  Ìó ‘”  Ìô ‘”  Ìõ ‘”  Ìö ‘”  Ì÷ ‘”  Ìø ‘”  Ìù ‘”  Ìú ‘”  Ìû ‘”  Ìü ‘”  Ìý ‘”  Ìþ ‘”  Ìÿ ‘”  Í  ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í	 ‘”  Í
- ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í ‘”  Í  ‘”  Í! ‘”  Í" ‘”  Í# ‘”  Í$ ‘”  Í% ‘”  Í& ‘”  Í' ‘”  Í( ‘”  Í) ‘”  Í* ‘”  Í+ ‘”  Í, ‘”  Í- ‘”  Í. ‘”  Í/ ‘”  Í0 ‘”  Í1 ‘”  Í2 ‘”  Í3 ‘”  Í4 ‘”  Í5 ‘”  Í6 ‘”  Í7 ‘”  Í8 ‘”  Í9 ‘”  Í: ‘”  Í; ‘”  Í< ‘”  Í= ‘”  Í> ‘”  Í? ‘”  Í@ ‘”  ÍA ‘”  ÍB ‘”  ÍC ‘”  ÍD ‘”  ÍE ÔrJ’§missing¦pluginÃ¦genAbcÂÔ  ÔrK”²dynamicImportCache¹exportAllDeclarationCache»exportNamedDeclarationCache«importCache•ÔrL•¤type¥start£endªspecifiers¦source±ImportDeclarationÌ€Ì´‘ÔrM”¤type¥start£end¥local¶ImportDefaultSpecifierÌ‡ÌÔrN”¤type¥start£end¤nameªIdentifierÌ‡Ì©wantAgentÔrO•¤type¥start£end¥value£raw§LiteralÌ–Ì³»@ohos.app.ability.wantAgent½"@ohos.app.ability.wantAgent"L±ImportDeclarationÌ¶ÌÚ‘M¶ImportDefaultSpecifierÌ½ÌÄNªIdentifierÌ½ÌÄ§displayO§LiteralÌÊÌÙ­@ohos.display¯"@ohos.display"L±ImportDeclarationÌÜÍ-‘M¶ImportDefaultSpecifierÌãÌøNªIdentifierÌãÌøµbackgroundTaskManagerO§LiteralÌþÍ,Ù,@ohos.resourceschedule.backgroundTaskManagerÙ."@ohos.resourceschedule.backgroundTaskManager"L±ImportDeclarationÍ/ÍO‘M¶ImportDefaultSpecifierÍ6Í;NªIdentifierÍ6Í;¥hilogO§LiteralÍAÍN«@ohos.hilog­"@ohos.hilog"L±ImportDeclarationÍQÍw‘M¶ImportDefaultSpecifierÍXÍ`NªIdentifierÍXÍ`¨ohscreenO§LiteralÍfÍv®libohscreen.so°'libohscreen.so'

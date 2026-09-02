@@ -12,7 +12,8 @@ class ScreenStreamer {
 public:
     static ScreenStreamer &Get();
 
-    int Start(int port, int width, int height, int fps, int bitrate, uint64_t displayId);
+    int Start(int port, int width, int height, int fps, int bitrate, uint64_t displayId, int rotationDeg);
+    int UpdateSize(int width, int height, uint64_t displayId, int rotationDeg);
     int Stop();
     int State() const;
 
@@ -31,6 +32,8 @@ private:
 
     void AcceptLoop();
     bool SendHeader(int fd);
+    bool SendOrientationChange(int visW, int visH, int rotationDeg);
+    bool SendCurrentCodecConfig();
     bool WriteAll(int fd, const uint8_t *data, size_t len);
     bool StartCapture();
     void StopCapture();
@@ -57,6 +60,8 @@ private:
     int height_{1280};
     int fps_{30};
     int bitrate_{8000000};
+    int rotationDeg_{0};
+    int startRotationDeg_{0};
     uint64_t displayId_{0};
 
     void *capture_{nullptr};
