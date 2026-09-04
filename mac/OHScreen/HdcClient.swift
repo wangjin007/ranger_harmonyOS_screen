@@ -88,6 +88,27 @@ final class HdcClient {
         }
     }
 
+    func removeForward(serial: String, port: Int) {
+        _ = try? run(["-t", serial, "fport", "rm", "tcp:\(port)", "tcp:\(port)"])
+    }
+
+    /// 拔线后 `-t serial` 往往失败，但 hdc 仍占着本机端口。必须无设备也能清掉。
+    func removeAllForwards(port: Int) {
+        let spec = "tcp:\(port)"
+        _ = try? run(["fport", "rm", spec, spec])
+        if let ls = try? run(["fport", "ls"]) {
+            let text = ls.combined
+            for raw in text.split(whereSeparator: \.isNewline) {
+                let line = String(raw).trimmingCharacters(in: .whitespaces)
+                guard line.contains(spec) else { continue }
+                let parts = line.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+                if parts.count >= 2 {
+                    _ = try? run(["fport", "rm", parts[0], parts[1]])
+                }
+            }
+        }
+    }
+
     func startAbility(serial: String) throws {
         var r = try run([
             "-t", serial, "shell", "aa", "start",

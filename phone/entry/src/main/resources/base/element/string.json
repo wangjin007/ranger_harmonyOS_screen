@@ -15,6 +15,10 @@
     {
       "name": "keep_bg_reason",
       "value": "投屏过程中需要在后台继续采集屏幕并发送到电脑"
+    },
+    {
+      "name": "camera_reason",
+      "value": "扫描电脑上的二维码，连接到 Mac 进行无线投屏"
     }
   ]
 }

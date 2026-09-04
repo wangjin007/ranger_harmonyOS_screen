@@ -1,9 +1,11 @@
-import { common, wantAgent, WantAgent } from '@kit.AbilityKit';
+import { abilityAccessCtrl, common, Permissions, wantAgent, WantAgent } from '@kit.AbilityKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { scanBarcode, scanCore } from '@kit.ScanKit';
 import ohscreen from 'libohscreen.so';
 import { scaledCaptureSize } from '../utils/CaptureSize';
+import { parsePairPayload } from '../utils/PairUrl';
 
 const DOMAIN = 0x3200;
 const PORT = 27183;
@@ -17,6 +19,8 @@ struct Index {
   @State detailText: string = '请用 Mac 端连接本机';
   @State running: boolean = false;
   @State ticks: number = 0;
+  @State streaming: boolean = false;
+  private clientMode: boolean = false;
   private timerId: number = -1;
   private keepAlive: boolean = false;
   private cancelCb: ((info: backgroundTaskManager.ContinuousTaskCancelInfo) => void) | undefined = undefined;
@@ -117,6 +121,8 @@ struct Index {
     const size = scaledCaptureSize();
     const rc = ohscreen.startServer(PORT, size[0], size[1], FPS, BITRATE, size[2], size[3]);
     this.running = rc === 0;
+    this.clientMode = false;
+    this.streaming = false;
     if (rc === 0) {
       this.statusText = '等待 Mac 连接';
       this.detailText = `端口 ${PORT} · ${size[0]}×${size[1]} · 连接后请允许整屏录制`;
@@ -130,8 +136,67 @@ struct Index {
     ohscreen.stopServer();
     this.stopKeepAlive();
     this.running = false;
+    this.streaming = false;
+    this.clientMode = false;
     this.statusText = '已停止';
-    this.detailText = '可点「开始等待」再次监听';
+    this.detailText = '可点「开始等待」使用 USB，或扫码连接电脑';
+  }
+
+  private startWirelessClient(hosts: string, port: number, pin: number): void {
+    ohscreen.stopServer();
+    this.stopKeepAlive();
+    const size = scaledCaptureSize();
+    const rc = ohscreen.startClient(hosts, port, size[0], size[1], FPS, BITRATE, size[2], size[3], pin);
+    this.running = rc === 0;
+    this.clientMode = rc === 0;
+    this.streaming = false;
+    if (rc === 0) {
+      this.statusText = '正在连接电脑';
+      this.detailText = `${hosts} · 连接后请允许整屏录制`;
+    } else {
+      this.statusText = '连接失败';
+      this.detailText = `startClient 返回 ${rc}。请先点停止再扫码。`;
+    }
+  }
+
+  private async scanMac(): Promise<void> {
+    const context = this.abilityContext();
+    if (context === undefined) {
+      return;
+    }
+    try {
+      const atManager = abilityAccessCtrl.createAtManager();
+      const permissions: Array<Permissions> = ['ohos.permission.CAMERA'];
+      const grant = await atManager.requestPermissionsFromUser(context, permissions);
+      if (grant.authResults.length > 0 && grant.authResults[0] !== 0) {
+        this.detailText = '需要相机权限才能扫码';
+        return;
+      }
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, 'OHScreen', `camera permission ${e.code} ${e.message}`);
+    }
+    const options: scanBarcode.ScanOptions = {
+      scanTypes: [scanCore.ScanType.QR_CODE],
+      enableMultiMode: false,
+      enableAlbum: true
+    };
+    try {
+      const result: scanBarcode.ScanResult = await scanBarcode.startScanForResult(context, options);
+      const target = parsePairPayload(result.originalValue);
+      if (target === undefined) {
+        this.statusText = '二维码无效';
+        this.detailText = '请扫描 Mac 端 OHScreen 无线模式显示的二维码';
+        return;
+      }
+      this.startWirelessClient(target.hosts, target.port, target.pin);
+    } catch (err) {
+      const e = err as BusinessError;
+      if (e.code !== 10005001) {
+        this.detailText = `扫码失败 ${e.code} ${e.message}`;
+        hilog.error(DOMAIN, 'OHScreen', `scan failed ${e.code} ${e.message}`);
+      }
+    }
   }
 
   private refreshState(): void {
@@ -142,14 +207,31 @@ struct Index {
     ohscreen.updateSize(size[0], size[1], size[2], size[3]);
     const s = ohscreen.getState();
     if (s === 1) {
-      this.statusText = '等待 Mac 连接';
+      const wasStreaming = this.streaming;
+      this.statusText = this.clientMode ? '正在连接电脑' : '等待 Mac 连接';
+      this.streaming = false;
+      if (this.clientMode) {
+        this.detailText = '正在连接电脑，连接后请允许整屏录制';
+      } else if (wasStreaming) {
+        this.detailText = '电脑已断开。可继续等待 USB；换机请在电脑刷新设备后再点连接。也可扫码改用无线。';
+        this.stopKeepAlive();
+      }
     } else if (s === 2) {
+      this.streaming = true;
       this.statusText = '正在投屏';
       this.detailText = '授权后请滑回桌面或打开其它 App。不要停在本页，也不要用分屏把 OHScreen 留在屏幕上。';
       this.startKeepAlive();
     } else if (s === 3) {
-      this.statusText = '录屏没启动';
-      this.detailText = '授权被取消，或采集启动失败。请在 Mac 再点连接，弹窗里选「屏幕」并允许。';
+      this.streaming = false;
+      this.statusText = this.clientMode ? '无线连接失败' : '录屏没启动';
+      this.detailText = this.clientMode
+        ? '电脑正在给其它设备投屏，或网络不通。请先让当前投屏的手机点停止（或电脑点断开），再扫同一个码。'
+        : '授权被取消，或采集启动失败。请在 Mac 再点连接，弹窗里选「屏幕」并允许。';
+    } else if (s === 0 && this.clientMode) {
+      this.running = false;
+      this.streaming = false;
+      this.statusText = '已断开';
+      this.detailText = '可再次扫同一个二维码，或点「开始等待」使用 USB';
     }
   }
 
@@ -182,12 +264,22 @@ struct Index {
             this.stopService();
           })
       } else {
-        Button('开始等待')
+        Button('开始等待 USB')
           .width('60%')
           .backgroundColor('#2EC4B6')
           .fontColor('#111827')
           .onClick(() => {
             this.startService();
+          })
+      }
+      if (!this.streaming) {
+        Button('扫码连接电脑')
+          .width('60%')
+          .margin({ top: 12 })
+          .backgroundColor('#1F2937')
+          .fontColor('#E5E7EB')
+          .onClick(() => {
+            this.scanMac();
           })
       }
     }

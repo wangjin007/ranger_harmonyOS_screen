@@ -41,6 +41,56 @@ static napi_value StartServer(napi_env env, napi_callback_info info)
     return result;
 }
 
+static napi_value StartClient(napi_env env, napi_callback_info info)
+{
+    size_t argc = 9;
+    napi_value args[9] = {nullptr};
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    char hosts[256] = {0};
+    size_t hostLen = 0;
+    int32_t port = 27183;
+    int32_t width = 720;
+    int32_t height = 1280;
+    int32_t fps = 30;
+    int32_t bitrate = 8000000;
+    int64_t displayId = 0;
+    int32_t rotationDeg = 0;
+    int32_t pin = 0;
+    if (argc > 0) {
+        napi_get_value_string_utf8(env, args[0], hosts, sizeof(hosts), &hostLen);
+    }
+    if (argc > 1) {
+        napi_get_value_int32(env, args[1], &port);
+    }
+    if (argc > 2) {
+        napi_get_value_int32(env, args[2], &width);
+    }
+    if (argc > 3) {
+        napi_get_value_int32(env, args[3], &height);
+    }
+    if (argc > 4) {
+        napi_get_value_int32(env, args[4], &fps);
+    }
+    if (argc > 5) {
+        napi_get_value_int32(env, args[5], &bitrate);
+    }
+    if (argc > 6) {
+        napi_get_value_int64(env, args[6], &displayId);
+    }
+    if (argc > 7) {
+        napi_get_value_int32(env, args[7], &rotationDeg);
+    }
+    if (argc > 8) {
+        napi_get_value_int32(env, args[8], &pin);
+    }
+    int rc = ScreenStreamer::Get().StartClient(hosts, port, width, height, fps, bitrate,
+        displayId < 0 ? 0 : static_cast<uint64_t>(displayId), rotationDeg,
+        pin < 0 ? 0 : static_cast<uint32_t>(pin));
+    napi_value result;
+    napi_create_int32(env, rc, &result);
+    return result;
+}
+
 static napi_value UpdateSize(napi_env env, napi_callback_info info)
 {
     size_t argc = 4;
@@ -92,6 +142,7 @@ static napi_value Init(napi_env env, napi_value exports)
 {
     napi_property_descriptor desc[] = {
         {"startServer", nullptr, StartServer, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"startClient", nullptr, StartClient, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"updateSize", nullptr, UpdateSize, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"stopServer", nullptr, StopServer, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"getState", nullptr, GetState, nullptr, nullptr, nullptr, napi_default, nullptr},

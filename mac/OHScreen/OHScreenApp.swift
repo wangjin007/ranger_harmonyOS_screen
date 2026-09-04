@@ -9,7 +9,7 @@ struct OHScreenApp: App {
             ContentView()
                 .environmentObject(model)
         }
-        .defaultSize(width: 980, height: 720)
+        .defaultSize(width: 1040, height: 740)
         .windowResizability(.contentMinSize)
     }
 }

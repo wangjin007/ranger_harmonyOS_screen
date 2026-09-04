@@ -32,55 +32,100 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
 
-                    if !model.hdcPath.isEmpty {
-                        Text("hdc: \(model.hdcPath)")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(2)
-                    }
-
-                    Picker("设备", selection: $model.selectedDevice) {
-                        if model.devices.isEmpty {
-                            Text("无设备").tag("")
-                        }
-                        ForEach(model.devices, id: \.self) { id in
-                            Text(id).tag(id)
+                    Picker("连接方式", selection: Binding(
+                        get: { model.linkMode },
+                        set: { model.setLinkMode($0) }
+                    )) {
+                        ForEach(LinkMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
                         }
                     }
+                    .pickerStyle(.segmented)
 
-                    HStack {
-                        Button("刷新设备") { model.refreshDevices() }
-                            .disabled(model.busy)
-                        Button("诊断截图") { model.snapshot() }
-                            .disabled(model.busy || model.selectedDevice.isEmpty)
-                    }
+                    if model.linkMode == .usb {
+                        if !model.hdcPath.isEmpty {
+                            Text("hdc: \(model.hdcPath)")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(2)
+                        }
 
-                    HStack {
-                        if model.connected {
-                            Button("断开") { model.disconnect() }
-                        } else {
-                            Button("连接") { model.connect() }
+                        Picker("设备", selection: $model.selectedDevice) {
+                            if model.devices.isEmpty {
+                                Text("无设备").tag("")
+                            }
+                            ForEach(model.devices, id: \.self) { id in
+                                Text(id).tag(id)
+                            }
+                        }
+
+                        HStack {
+                            Button("刷新设备") { model.refreshDevices() }
+                                .disabled(model.busy)
+                            Button("诊断截图") { model.snapshot() }
                                 .disabled(model.busy || model.selectedDevice.isEmpty)
-                                .keyboardShortcut(.defaultAction)
+                        }
+
+                        HStack {
+                            if model.connected {
+                                Button("断开") { model.disconnect() }
+                            } else {
+                                Button("连接") { model.connect() }
+                                    .disabled(model.busy || !model.devices.contains(model.selectedDevice))
+                                    .keyboardShortcut(.defaultAction)
+                            }
+                        }
+
+                        Divider()
+                        Text("HAP（可选）")
+                            .font(.headline)
+                        Text(model.hapPath.isEmpty ? "未选择。可先用 DevEco 安装。" : model.hapPath)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                        Button("选择 HAP") { model.pickHap() }
+                    } else {
+                        Text("用手机 OHScreen 扫下面的码")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if let qr = model.wirelessQR {
+                            Image(nsImage: qr)
+                                .interpolation(.none)
+                                .resizable()
+                                .frame(width: 200, height: 200)
+                                .padding(8)
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        if !model.wirelessPinText.isEmpty {
+                            Text("配对码 \(model.wirelessPinText)")
+                                .font(.title3.monospaced())
+                                .textSelection(.enabled)
+                        }
+                        if !model.wirelessIPs.isEmpty {
+                            Text(model.wirelessIPs)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .textSelection(.enabled)
+                        }
+                        HStack {
+                            Button("刷新二维码") { model.startWirelessListen() }
+                                .disabled(model.connected)
+                            if model.connected {
+                                Button("断开") { model.disconnect() }
+                            }
                         }
                     }
-
-                    Divider()
-                    Text("HAP（可选）")
-                        .font(.headline)
-                    Text(model.hapPath.isEmpty ? "未选择。可先用 DevEco 安装。" : model.hapPath)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
-                    Button("选择 HAP") { model.pickHap() }
 
                     Spacer()
-                    Text("第一期只看画面。连接后请在手机上允许录屏。")
+                    Text(model.linkMode == .wireless
+                         ? "同一 Wi-Fi（或电脑连手机热点）。换机：当前手机点停止，新手机扫同一个码。系统可能询问防火墙，请允许。"
+                         : "拔线后面面会停。换机请刷新设备、选中新设备再点连接。连接后请在手机上允许录屏。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .padding()
-                .frame(width: 260)
+                .frame(width: 280)
                 .background(Color(nsColor: .controlBackgroundColor))
             }
 

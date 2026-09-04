@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <vector>
 
@@ -193,6 +194,7 @@ int ScreenStreamer::Start(int port, int width, int height, int fps, int bitrate,
     if (running_.load()) {
         return 0;
     }
+    Stop();
     port_ = port > 0 ? port : 27183;
     width_ = width > 0 ? (width & ~1) : 720;
     height_ = height > 0 ? (height & ~1) : 1280;
@@ -233,9 +235,37 @@ int ScreenStreamer::Start(int port, int width, int height, int fps, int bitrate,
 
     running_.store(true);
     clientDead_.store(false);
+    clientMode_ = false;
     state_.store(kStateListening);
     acceptThread_ = std::thread([this]() { AcceptLoop(); });
     OH_LOG_INFO(LOG_APP, "listening on %{public}d (%{public}dx%{public}d @%{public}d)", port_, width_, height_, fps_);
+    return 0;
+}
+
+int ScreenStreamer::StartClient(const char *hosts, int port, int width, int height, int fps, int bitrate,
+    uint64_t displayId, int rotationDeg, uint32_t pin)
+{
+    Stop();
+    if (hosts == nullptr || hosts[0] == '\0') {
+        return -1;
+    }
+    port_ = port > 0 ? port : 27183;
+    width_ = width > 0 ? (width & ~1) : 720;
+    height_ = height > 0 ? (height & ~1) : 1280;
+    fps_ = fps > 0 ? fps : 30;
+    bitrate_ = bitrate > 0 ? bitrate : 8000000;
+    displayId_ = displayId;
+    rotationDeg_ = NormalizeRotation(rotationDeg);
+    startRotationDeg_ = rotationDeg_;
+    pin_ = pin;
+    hostList_ = hosts;
+    listenFd_ = -1;
+    running_.store(true);
+    clientDead_.store(false);
+    clientMode_ = true;
+    state_.store(kStateListening);
+    acceptThread_ = std::thread([this]() { ClientLoop(); });
+    OH_LOG_INFO(LOG_APP, "client connect %{public}s:%{public}d pin=%{public}u", hostList_.c_str(), port_, pin_);
     return 0;
 }
 
@@ -479,6 +509,148 @@ bool ScreenStreamer::SendHeader(int fd)
     return WriteAll(fd, hdr, sizeof(hdr));
 }
 
+bool ScreenStreamer::SendAuth(int fd)
+{
+    std::lock_guard<std::mutex> sendLock(sendMu_);
+    uint8_t pkt[8];
+    pkt[0] = 'O';
+    pkt[1] = 'H';
+    pkt[2] = 'P';
+    pkt[3] = 'N';
+    PutBe32(pkt + 4, pin_);
+    return WriteAll(fd, pkt, sizeof(pkt));
+}
+
+int ScreenStreamer::ConnectTcp(const char *host, int port)
+{
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) {
+        return -1;
+    }
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(static_cast<uint16_t>(port));
+    if (inet_pton(AF_INET, host, &addr.sin_addr) != 1) {
+        OH_LOG_ERROR(LOG_APP, "bad host %{public}s", host);
+        close(fd);
+        return -1;
+    }
+    timeval tv;
+    tv.tv_sec = 8;
+    tv.tv_usec = 0;
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    if (connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0) {
+        OH_LOG_ERROR(LOG_APP, "connect %{public}s:%{public}d failed %{public}d", host, port, errno);
+        close(fd);
+        return -1;
+    }
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    return fd;
+}
+
+void ScreenStreamer::RunSession(int fd)
+{
+    headerSent_.store(false);
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        clientFd_ = fd;
+    }
+    clientDead_.store(false);
+    if (!StartCapture()) {
+        OH_LOG_ERROR(LOG_APP, "StartCapture failed");
+        state_.store(kStateError);
+        std::lock_guard<std::mutex> lock(mu_);
+        close(clientFd_);
+        clientFd_ = -1;
+        return;
+    }
+    if (!SendHeader(fd)) {
+        OH_LOG_ERROR(LOG_APP, "send header failed");
+        StopCapture();
+        std::lock_guard<std::mutex> lock(mu_);
+        close(clientFd_);
+        clientFd_ = -1;
+        state_.store(kStateError);
+        return;
+    }
+    headerSent_.store(true);
+    state_.store(kStateStreaming);
+    RequestKeyFrame();
+    SendCurrentCodecConfig();
+    while (running_.load() && !clientDead_.load()) {
+        pollfd cp;
+        cp.fd = fd;
+        cp.events = POLLIN | POLLHUP | POLLERR;
+        cp.revents = 0;
+        int cr = poll(&cp, 1, kPollMs);
+        if (cr > 0 && (cp.revents & (POLLHUP | POLLERR | POLLNVAL))) {
+            break;
+        }
+        if (cr > 0 && (cp.revents & POLLIN)) {
+            uint8_t junk[8];
+            ssize_t n = recv(fd, junk, sizeof(junk), 0);
+            if (n <= 0) {
+                break;
+            }
+        }
+    }
+    OH_LOG_INFO(LOG_APP, "session ended");
+    headerSent_.store(false);
+    StopCapture();
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        if (clientFd_ >= 0) {
+            close(clientFd_);
+            clientFd_ = -1;
+        }
+    }
+}
+
+void ScreenStreamer::ClientLoop()
+{
+    int fd = -1;
+    std::string rest = hostList_;
+    while (!rest.empty() && fd < 0 && running_.load()) {
+        size_t comma = rest.find(',');
+        std::string host = comma == std::string::npos ? rest : rest.substr(0, comma);
+        rest = comma == std::string::npos ? std::string() : rest.substr(comma + 1);
+        while (!host.empty() && (host.front() == ' ' || host.front() == '\t')) {
+            host.erase(host.begin());
+        }
+        while (!host.empty() && (host.back() == ' ' || host.back() == '\t')) {
+            host.pop_back();
+        }
+        if (host.empty()) {
+            continue;
+        }
+        fd = ConnectTcp(host.c_str(), port_);
+    }
+    if (fd < 0) {
+        OH_LOG_ERROR(LOG_APP, "all hosts failed");
+        state_.store(kStateError);
+        running_.store(false);
+        return;
+    }
+    OH_LOG_INFO(LOG_APP, "connected to mac");
+    if (!SendAuth(fd)) {
+        OH_LOG_ERROR(LOG_APP, "send auth failed");
+        close(fd);
+        state_.store(kStateError);
+        running_.store(false);
+        return;
+    }
+    RunSession(fd);
+    running_.store(false);
+    if (state_.load() != kStateError) {
+        state_.store(kStateIdle);
+    }
+}
+
 bool ScreenStreamer::SendOrientationChange(int visW, int visH, int rotationDeg)
 {
     if (!headerSent_.load()) {
@@ -544,59 +716,7 @@ void ScreenStreamer::AcceptLoop()
             continue;
         }
         OH_LOG_INFO(LOG_APP, "client connected");
-        headerSent_.store(false);
-        {
-            std::lock_guard<std::mutex> lock(mu_);
-            clientFd_ = fd;
-        }
-        clientDead_.store(false);
-        if (!StartCapture()) {
-            OH_LOG_ERROR(LOG_APP, "StartCapture failed");
-            state_.store(kStateError);
-            std::lock_guard<std::mutex> lock(mu_);
-            close(clientFd_);
-            clientFd_ = -1;
-            continue;
-        }
-        if (!SendHeader(fd)) {
-            OH_LOG_ERROR(LOG_APP, "send header failed");
-            StopCapture();
-            std::lock_guard<std::mutex> lock(mu_);
-            close(clientFd_);
-            clientFd_ = -1;
-            continue;
-        }
-        headerSent_.store(true);
-        state_.store(kStateStreaming);
-        RequestKeyFrame();
-        SendCurrentCodecConfig();
-        while (running_.load() && !clientDead_.load()) {
-            pollfd cp;
-            cp.fd = fd;
-            cp.events = POLLIN | POLLHUP | POLLERR;
-            cp.revents = 0;
-            int cr = poll(&cp, 1, kPollMs);
-            if (cr > 0 && (cp.revents & (POLLHUP | POLLERR | POLLNVAL))) {
-                break;
-            }
-            if (cr > 0 && (cp.revents & POLLIN)) {
-                uint8_t junk[8];
-                ssize_t n = recv(fd, junk, sizeof(junk), 0);
-                if (n <= 0) {
-                    break;
-                }
-            }
-        }
-        OH_LOG_INFO(LOG_APP, "client gone, stop capture");
-        headerSent_.store(false);
-        StopCapture();
-        {
-            std::lock_guard<std::mutex> lock(mu_);
-            if (clientFd_ >= 0) {
-                close(clientFd_);
-                clientFd_ = -1;
-            }
-        }
+        RunSession(fd);
         if (running_.load()) {
             state_.store(kStateListening);
         }

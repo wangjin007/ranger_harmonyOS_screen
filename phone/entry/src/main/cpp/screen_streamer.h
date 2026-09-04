@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -13,6 +14,8 @@ public:
     static ScreenStreamer &Get();
 
     int Start(int port, int width, int height, int fps, int bitrate, uint64_t displayId, int rotationDeg);
+    int StartClient(const char *hosts, int port, int width, int height, int fps, int bitrate, uint64_t displayId,
+        int rotationDeg, uint32_t pin);
     int UpdateSize(int width, int height, uint64_t displayId, int rotationDeg);
     int Stop();
     int State() const;
@@ -31,6 +34,10 @@ private:
     ScreenStreamer &operator=(const ScreenStreamer &) = delete;
 
     void AcceptLoop();
+    void ClientLoop();
+    void RunSession(int fd);
+    int ConnectTcp(const char *host, int port);
+    bool SendAuth(int fd);
     bool SendHeader(int fd);
     bool SendOrientationChange(int visW, int visH, int rotationDeg);
     bool SendCurrentCodecConfig();
@@ -63,6 +70,9 @@ private:
     int rotationDeg_{0};
     int startRotationDeg_{0};
     uint64_t displayId_{0};
+    uint32_t pin_{0};
+    std::string hostList_;
+    bool clientMode_{false};
 
     void *capture_{nullptr};
     void *encoder_{nullptr};

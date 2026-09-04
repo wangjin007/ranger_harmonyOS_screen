@@ -14,6 +14,7 @@
 		A10000000000000100000005 /* StreamSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000005 /* StreamSession.swift */; };
 		A10000000000000100000006 /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000006 /* H264Decoder.swift */; };
 		A10000000000000100000007 /* VideoCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000100000007 /* VideoCanvas.swift */; };
+		A1000000000000010000000C /* WirelessPairing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000010000000C /* WirelessPairing.swift */; };
 		A10000000000000100000008 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000100000008 /* AVFoundation.framework */; };
 		A10000000000000100000009 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000100000009 /* VideoToolbox.framework */; };
 		A1000000000000010000000A /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2000000000000010000000A /* Network.framework */; };
@@ -27,6 +28,7 @@
 		A20000000000000100000005 /* StreamSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamSession.swift; sourceTree = "<group>"; };
 		A20000000000000100000006 /* H264Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264Decoder.swift; sourceTree = "<group>"; };
 		A20000000000000100000007 /* VideoCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCanvas.swift; sourceTree = "<group>"; };
+		A2000000000000010000000C /* WirelessPairing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WirelessPairing.swift; sourceTree = "<group>"; };
 		A20000000000000100000008 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		A20000000000000100000009 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		A2000000000000010000000A /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
@@ -67,6 +69,7 @@
 				A20000000000000100000005 /* StreamSession.swift */,
 				A20000000000000100000006 /* H264Decoder.swift */,
 				A20000000000000100000007 /* VideoCanvas.swift */,
+				A2000000000000010000000C /* WirelessPairing.swift */,
 				A2000000000000010000000B /* Info.plist */,
 			);
 			path = OHScreen;
@@ -166,6 +169,7 @@
 				A10000000000000100000005 /* StreamSession.swift in Sources */,
 				A10000000000000100000006 /* H264Decoder.swift in Sources */,
 				A10000000000000100000007 /* VideoCanvas.swift in Sources */,
+				A1000000000000010000000C /* WirelessPairing.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
