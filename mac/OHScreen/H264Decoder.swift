@@ -7,6 +7,7 @@ import VideoToolbox
 final class VideoRenderer {
     let displayLayer: CALayer
     var onEvent: ((String) -> Void)?
+    var onPresentedSize: ((CGSize) -> Void)?
 
     private var formatDesc: CMVideoFormatDescription?
     private var decompressionSession: VTDecompressionSession?
@@ -186,11 +187,13 @@ final class VideoRenderer {
             emit("无法把解码帧转换为显示图像")
             return
         }
+        let presented = CGSize(width: frame.width, height: frame.height)
         DispatchQueue.main.async {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.displayLayer.contents = frame
             CATransaction.commit()
+            self.onPresentedSize?(presented)
             if !self.loggedFrame {
                 self.loggedFrame = true
                 self.emit("已绘制第一帧")

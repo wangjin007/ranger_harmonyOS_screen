@@ -6,15 +6,25 @@ function even(n: number): number {
   return n & ~1;
 }
 
+function rotationToDeg(rot: number): number {
+  if (rot === 90 || rot === 180 || rot === 270) {
+    return rot;
+  }
+  if (rot === 0 || rot === 1 || rot === 2 || rot === 3) {
+    return rot * 90;
+  }
+  const n = ((rot % 4) + 4) % 4;
+  return n * 90;
+}
+
 export function scaledCaptureSize(): [number, number, number, number] {
   try {
     const d = display.getDefaultDisplaySync();
     let w = d.width;
     let h = d.height;
     const ori = d.orientation as number;
-    const rot = d.rotation as number;
-    const rotationDeg = ((rot % 4) + 4) % 4 * 90;
-    const landscape = ori === 1 || ori === 3 || rot === 1 || rot === 3;
+    const rotationDeg = rotationToDeg(d.rotation as number);
+    const landscape = ori === 1 || ori === 3 || rotationDeg === 90 || rotationDeg === 270;
     if (landscape && w < h) {
       const tmp = w;
       w = h;

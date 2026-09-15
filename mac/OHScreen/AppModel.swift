@@ -43,6 +43,12 @@ final class AppModel: ObservableObject {
         renderer.onEvent = { [weak self] msg in
             self?.log(msg)
         }
+        renderer.onPresentedSize = { [weak self] size in
+            guard let self else { return }
+            if abs(self.videoSize.width - size.width) > 1 || abs(self.videoSize.height - size.height) > 1 {
+                self.videoSize = size
+            }
+        }
     }
 
     func log(_ msg: String) {
@@ -295,6 +301,7 @@ final class AppModel: ObservableObject {
     }
 
     private func handleHeader(_ header: StreamHeader) {
+        renderer.setDisplayRotation(0)
         videoSize = CGSize(width: header.width, height: header.height)
         connected = true
         busy = false

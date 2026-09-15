@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
@@ -129,13 +130,17 @@ struct ContentView: View {
                 .background(Color(nsColor: .controlBackgroundColor))
             }
 
-            // 中间：投屏画面
+            // 中间：投屏画面。按真实横/竖屏比例铺满可用区域（横屏时占满宽度）。
             ZStack {
-                VideoCanvas(layer: model.renderer.displayLayer)
-                    .background(Color.black)
-                    .aspectRatio(model.videoSize, contentMode: .fit)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black)
+                GeometryReader { geo in
+                    let box = Self.fitted(model.videoSize, in: geo.size)
+                    VideoCanvas(layer: model.renderer.displayLayer)
+                        .frame(width: box.width, height: box.height)
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                        .background(Color.black)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
 
                 // 控制按钮
                 VStack {
@@ -161,23 +166,7 @@ struct ContentView: View {
 
                         // 右侧：全屏按钮
                         Button(action: {
-                            if isFullScreenMode {
-                                // 退出全屏模式：恢复侧边栏状态
-                                withAnimation {
-                                    showLeftSidebar = savedLeftSidebarState
-                                    showRightSidebar = savedRightSidebarState
-                                    isFullScreenMode = false
-                                }
-                            } else {
-                                // 进入全屏模式：保存当前状态并隐藏侧边栏
-                                savedLeftSidebarState = showLeftSidebar
-                                savedRightSidebarState = showRightSidebar
-                                withAnimation {
-                                    showLeftSidebar = false
-                                    showRightSidebar = false
-                                    isFullScreenMode = true
-                                }
-                            }
+                            togglePresentationFullScreen()
                         }) {
                             Image(systemName: isFullScreenMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 18))
@@ -256,5 +245,47 @@ struct ContentView: View {
             }
         }
         .onAppear { model.refreshDevices() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
+            guard isFullScreenMode else { return }
+            withAnimation {
+                showLeftSidebar = savedLeftSidebarState
+                showRightSidebar = savedRightSidebarState
+                isFullScreenMode = false
+            }
+        }
+    }
+
+    private func togglePresentationFullScreen() {
+        if isFullScreenMode {
+            withAnimation {
+                showLeftSidebar = savedLeftSidebarState
+                showRightSidebar = savedRightSidebarState
+                isFullScreenMode = false
+            }
+            if let win = NSApp.keyWindow, win.styleMask.contains(.fullScreen) {
+                win.toggleFullScreen(nil)
+            }
+        } else {
+            savedLeftSidebarState = showLeftSidebar
+            savedRightSidebarState = showRightSidebar
+            withAnimation {
+                showLeftSidebar = false
+                showRightSidebar = false
+                isFullScreenMode = true
+            }
+            if let win = NSApp.keyWindow, !win.styleMask.contains(.fullScreen) {
+                win.toggleFullScreen(nil)
+            }
+        }
+    }
+
+    private static func fitted(_ video: CGSize, in bounds: CGSize) -> CGSize {
+        let vw = max(video.width, 1)
+        let vh = max(video.height, 1)
+        guard bounds.width > 1, bounds.height > 1 else {
+            return bounds
+        }
+        let scale = min(bounds.width / vw, bounds.height / vh)
+        return CGSize(width: (vw * scale).rounded(.down), height: (vh * scale).rounded(.down))
     }
 }

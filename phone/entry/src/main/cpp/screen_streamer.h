@@ -69,6 +69,7 @@ private:
     int bitrate_{8000000};
     int rotationDeg_{0};
     int startRotationDeg_{0};
+    int lastRelDeg_{-1};
     uint64_t displayId_{0};
     uint32_t pin_{0};
     std::string hostList_;

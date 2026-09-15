@@ -286,20 +286,27 @@ int ScreenStreamer::UpdateSize(int width, int height, uint64_t displayId, int ro
         height_ = h;
         rotationDeg_ = rot;
         startRotationDeg_ = rot;
+        lastRelDeg_ = -1;
         return 0;
     }
 
-    if (rot == rotationDeg_) {
-        return 0;
-    }
-    rotationDeg_ = rot;
     int rel = NormalizeRotation(rot - startRotationDeg_);
+    const bool wantLandscape = w > h;
+    const bool encLandscape = width_ > height_;
+    if ((rel == 0 || rel == 180) && wantLandscape != encLandscape) {
+        rel = 90;
+    }
     int visW = width_;
     int visH = height_;
     if (rel == 90 || rel == 270) {
         visW = height_;
         visH = width_;
     }
+    if (rot == rotationDeg_ && rel == lastRelDeg_) {
+        return 0;
+    }
+    rotationDeg_ = rot;
+    lastRelDeg_ = rel;
     OH_LOG_INFO(LOG_APP, "orientation %d -> vis %{public}dx%{public}d (enc %{public}dx%{public}d)", rel, visW, visH,
         width_, height_);
     if (!SendOrientationChange(visW, visH, rel)) {
@@ -855,6 +862,7 @@ bool ScreenStreamer::StartCapture()
     }
     OH_LOG_INFO(LOG_APP, "capture started mode=HOME_SCREEN");
     startRotationDeg_ = rotationDeg_;
+    lastRelDeg_ = -1;
     return true;
 }
 
