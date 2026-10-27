@@ -1,6 +1,7 @@
 import { abilityAccessCtrl, common, Permissions, wantAgent, WantAgent } from '@kit.AbilityKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { audio } from '@kit.AudioKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { scanBarcode, scanCore } from '@kit.ScanKit';
 import ohscreen from 'libohscreen.so';
@@ -24,6 +25,16 @@ struct Index {
   private timerId: number = -1;
   private keepAlive: boolean = false;
   private cancelCb: ((info: backgroundTaskManager.ContinuousTaskCancelInfo) => void) | undefined = undefined;
+  private audioManager: audio.AudioManager = audio.getAudioManager();
+  private volumeManager: audio.AudioVolumeManager = this.audioManager.getVolumeManager();
+  private originalMediaMuted: boolean | undefined = undefined;
+  private macOnlyAudioActive: boolean = false;
+  private volumeCb: (event: audio.StreamVolumeEvent) => void = (event: audio.StreamVolumeEvent): void => {
+    if (!this.macOnlyAudioActive || event.streamUsage !== audio.StreamUsage.STREAM_USAGE_MUSIC) {
+      return;
+    }
+    this.sendMediaVolume(event.volume);
+  };
 
   aboutToAppear(): void {
     this.cancelCb = (info: backgroundTaskManager.ContinuousTaskCancelInfo): void => {
@@ -37,6 +48,12 @@ struct Index {
       backgroundTaskManager.on('continuousTaskCancel', this.cancelCb);
     } catch (err) {
       hilog.error(DOMAIN, 'OHScreen', 'on continuousTaskCancel failed');
+    }
+    try {
+      this.volumeManager.on('streamVolumeChange', audio.StreamUsage.STREAM_USAGE_MUSIC, this.volumeCb);
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, 'OHScreen', `listen media volume ${e.code} ${e.message}`);
     }
     this.startService();
     this.timerId = setInterval((): void => {
@@ -58,6 +75,12 @@ struct Index {
       }
       this.cancelCb = undefined;
     }
+    try {
+      this.volumeManager.off('streamVolumeChange', this.volumeCb);
+    } catch (err) {
+      hilog.error(DOMAIN, 'OHScreen', 'off streamVolumeChange failed');
+    }
+    this.disableMacOnlyAudio();
   }
 
   private abilityContext(): common.UIAbilityContext | undefined {
@@ -133,6 +156,7 @@ struct Index {
   }
 
   private stopService(): void {
+    this.disableMacOnlyAudio();
     ohscreen.stopServer();
     this.stopKeepAlive();
     this.running = false;
@@ -208,6 +232,9 @@ struct Index {
     const s = ohscreen.getState();
     if (s === 1) {
       const wasStreaming = this.streaming;
+      if (wasStreaming) {
+        this.disableMacOnlyAudio();
+      }
       this.statusText = this.clientMode ? '正在连接电脑' : '等待 Mac 连接';
       this.streaming = false;
       if (this.clientMode) {
@@ -217,21 +244,85 @@ struct Index {
         this.stopKeepAlive();
       }
     } else if (s === 2) {
+      const wasStreaming = this.streaming;
       this.streaming = true;
+      if (!wasStreaming) {
+        this.enableMacOnlyAudio();
+      }
       this.statusText = '正在投屏';
-      this.detailText = '授权后请滑回桌面或打开其它 App。不要停在本页，也不要用分屏把 OHScreen 留在屏幕上。';
+      this.detailText = '仅电脑发声。手机音量键会调节电脑端投屏音量；结束投屏后自动恢复手机声音。授权后请打开其它 App。';
       this.startKeepAlive();
     } else if (s === 3) {
+      this.disableMacOnlyAudio();
       this.streaming = false;
       this.statusText = this.clientMode ? '无线连接失败' : '录屏没启动';
       this.detailText = this.clientMode
         ? '电脑正在给其它设备投屏，或网络不通。请先让当前投屏的手机点停止（或电脑点断开），再扫同一个码。'
         : '授权被取消，或采集启动失败。请在 Mac 再点连接，弹窗里选「屏幕」并允许。';
     } else if (s === 0 && this.clientMode) {
+      this.disableMacOnlyAudio();
       this.running = false;
       this.streaming = false;
       this.statusText = '已断开';
       this.detailText = '可再次扫同一个二维码，或点「开始等待」使用 USB';
+    }
+  }
+
+  private sendMediaVolume(level: number): void {
+    try {
+      const max = this.volumeManager.getMaxVolumeByStream(audio.StreamUsage.STREAM_USAGE_MUSIC);
+      const min = this.volumeManager.getMinVolumeByStream(audio.StreamUsage.STREAM_USAGE_MUSIC);
+      const percent = max > min ? Math.round((level - min) * 100 / (max - min)) : 100;
+      ohscreen.sendVolume(Math.max(0, Math.min(100, percent)));
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, 'OHScreen', `send media volume ${e.code} ${e.message}`);
+    }
+  }
+
+  private async enableMacOnlyAudio(): Promise<void> {
+    if (this.macOnlyAudioActive) {
+      return;
+    }
+    this.macOnlyAudioActive = true;
+    try {
+      const original = await this.audioManager.isMute(audio.AudioVolumeType.MEDIA);
+      if (!this.macOnlyAudioActive) {
+        return;
+      }
+      this.originalMediaMuted = original;
+      const level = this.volumeManager.getVolumeByStream(audio.StreamUsage.STREAM_USAGE_MUSIC);
+      this.sendMediaVolume(level);
+      await this.audioManager.mute(audio.AudioVolumeType.MEDIA, true);
+      if (!this.macOnlyAudioActive) {
+        await this.audioManager.mute(audio.AudioVolumeType.MEDIA, original);
+        this.originalMediaMuted = undefined;
+        return;
+      }
+      hilog.info(DOMAIN, 'OHScreen', 'phone media muted for Mac-only audio');
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, 'OHScreen', `mute phone media ${e.code} ${e.message}`);
+      this.originalMediaMuted = undefined;
+    }
+  }
+
+  private async disableMacOnlyAudio(): Promise<void> {
+    if (!this.macOnlyAudioActive) {
+      return;
+    }
+    this.macOnlyAudioActive = false;
+    const restore = this.originalMediaMuted;
+    this.originalMediaMuted = undefined;
+    if (restore === undefined) {
+      return;
+    }
+    try {
+      await this.audioManager.mute(audio.AudioVolumeType.MEDIA, restore);
+      hilog.info(DOMAIN, 'OHScreen', `phone media mute restored ${restore}`);
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, 'OHScreen', `restore phone media ${e.code} ${e.message}`);
     }
   }
 

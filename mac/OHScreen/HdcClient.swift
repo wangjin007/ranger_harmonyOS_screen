@@ -140,6 +140,64 @@ final class HdcClient {
         }
     }
 
+    func injectClick(serial: String, x: Int, y: Int) throws {
+        let r = try run([
+            "-t", serial, "shell", "uitest", "uiInput", "click",
+            String(x), String(y)
+        ])
+        if r.status != 0 {
+            throw HdcError.failed("点击注入失败：\(r.combined)")
+        }
+    }
+
+    func displaySize(serial: String) throws -> CGSize {
+        let r = try run([
+            "-t", serial, "shell", "hidumper",
+            "-s", "DisplayManagerService", "-a", "-a"
+        ])
+        guard r.status == 0 else {
+            throw HdcError.failed("读取屏幕尺寸失败：\(r.combined)")
+        }
+        var width: CGFloat?
+        var height: CGFloat?
+        for raw in r.stdout.split(whereSeparator: \.isNewline) {
+            let line = String(raw).trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("Width:"),
+               let value = Int(line.dropFirst("Width:".count).trimmingCharacters(in: .whitespaces)) {
+                width = CGFloat(value)
+            } else if line.hasPrefix("Height:"),
+                      let value = Int(line.dropFirst("Height:".count).trimmingCharacters(in: .whitespaces)) {
+                height = CGFloat(value)
+            }
+            if let width, let height, width > 0, height > 0 {
+                return CGSize(width: width, height: height)
+            }
+        }
+        throw HdcError.failed("未能解析设备屏幕尺寸")
+    }
+
+    func injectSwipe(serial: String, from: CGPoint, to: CGPoint) throws {
+        let r = try run([
+            "-t", serial, "shell", "uitest", "uiInput", "swipe",
+            String(Int(from.x.rounded())), String(Int(from.y.rounded())),
+            String(Int(to.x.rounded())), String(Int(to.y.rounded())),
+            "1200"
+        ])
+        if r.status != 0 {
+            throw HdcError.failed("滑动注入失败：\(r.combined)")
+        }
+    }
+
+    func injectKey(serial: String, keyCode: UInt16) throws {
+        let r = try run([
+            "-t", serial, "shell", "uitest", "uiInput", "keyEvent",
+            String(keyCode)
+        ])
+        if r.status != 0 {
+            throw HdcError.failed("按键注入失败：\(r.combined)")
+        }
+    }
+
     @discardableResult
     func run(_ args: [String]) throws -> HdcResult {
         let proc = Process()

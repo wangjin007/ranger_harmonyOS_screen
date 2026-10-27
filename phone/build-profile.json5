@@ -1,6 +1,19 @@
 {
   "app": {
     "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/wangjin/.ohos/config/default_phone_UHQeJlN1JJ5-Yi-xDc08n9aG8Vhwb_cvFUniHWS_Isw=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B0F91EF250B891F8C8F99BE3AF6A47C68F67F9898C1CF6293A1B8FD0842762F033E725E916BED76",
+          "profile": "/Users/wangjin/.ohos/config/default_phone_UHQeJlN1JJ5-Yi-xDc08n9aG8Vhwb_cvFUniHWS_Isw=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/wangjin/.ohos/config/default_phone_UHQeJlN1JJ5-Yi-xDc08n9aG8Vhwb_cvFUniHWS_Isw=.p12",
+          "storePassword": "0000001B9C710A7A35008C50C76C0EB942E92C76FA664A6F3279EA7EF546A7CD101B645DF2B8E9999AD588"
+        }
+      }
     ],
     "products": [
       {

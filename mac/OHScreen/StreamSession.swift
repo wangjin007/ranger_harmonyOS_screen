@@ -35,6 +35,8 @@ final class StreamSession {
     private var onHeader: ((StreamHeader) -> Void)?
     private var onSizeChange: ((StreamHeader) -> Void)?
     private var onFrame: ((Data, UInt64) -> Void)?
+    private var onAudio: ((Data, UInt64, Int, Int) -> Void)?
+    private var onVolume: ((Int) -> Void)?
     private var onClose: ((Error?) -> Void)?
     private var onReject: (() -> Void)?
     private var closed = false
@@ -62,11 +64,15 @@ final class StreamSession {
         onHeader: @escaping (StreamHeader) -> Void,
         onSizeChange: @escaping (StreamHeader) -> Void,
         onFrame: @escaping (Data, UInt64) -> Void,
+        onAudio: @escaping (Data, UInt64, Int, Int) -> Void,
+        onVolume: @escaping (Int) -> Void,
         onClose: @escaping (Error?) -> Void
     ) {
         self.onHeader = onHeader
         self.onSizeChange = onSizeChange
         self.onFrame = onFrame
+        self.onAudio = onAudio
+        self.onVolume = onVolume
         self.onClose = onClose
         closed = false
         requireAuth = false
@@ -81,6 +87,8 @@ final class StreamSession {
         onHeader: @escaping (StreamHeader) -> Void,
         onSizeChange: @escaping (StreamHeader) -> Void,
         onFrame: @escaping (Data, UInt64) -> Void,
+        onAudio: @escaping (Data, UInt64, Int, Int) -> Void,
+        onVolume: @escaping (Int) -> Void,
         onClose: @escaping (Error?) -> Void,
         onReject: (() -> Void)? = nil
     ) {
@@ -88,6 +96,8 @@ final class StreamSession {
         self.onHeader = onHeader
         self.onSizeChange = onSizeChange
         self.onFrame = onFrame
+        self.onAudio = onAudio
+        self.onVolume = onVolume
         self.onClose = onClose
         self.onReject = onReject
         closed = false
@@ -219,6 +229,16 @@ final class StreamSession {
         }
         while buffer.count >= 12 {
             let length = Int(be32(buffer, 0))
+            if length == 0xFFFFFFFC {
+                let type = buffer[4]
+                let value = Int(be16(buffer, 6))
+                buffer.removeSubrange(0..<12)
+                if type == 1 {
+                    let callback = onVolume
+                    DispatchQueue.main.async { callback?(max(0, min(value, 100))) }
+                }
+                continue
+            }
             if length == 0xFFFFFFFF {
                 let type = Int(buffer[4]) << 8 | Int(buffer[5])
                 let width = Int(buffer[6]) << 8 | Int(buffer[7])
@@ -233,6 +253,22 @@ final class StreamSession {
                 }
                 continue
             }
+            if length == 0xFFFFFFFE {
+                guard buffer.count >= 8 else { return }
+                let pcmLen = Int(be32(buffer, 4))
+                if pcmLen <= 0 || pcmLen > 256 * 1024 {
+                    throw StreamError.header
+                }
+                guard buffer.count >= 20 + pcmLen else { return }
+                let pts = be64(buffer, 8)
+                let rate = Int(be16(buffer, 16))
+                let channels = Int(buffer[18])
+                let pcm = Data(buffer[20..<(20 + pcmLen)])
+                buffer.removeSubrange(0..<(20 + pcmLen))
+                let callback = onAudio
+                DispatchQueue.main.async { callback?(pcm, pts, rate, channels) }
+                continue
+            }
             if length <= 0 || length > 8 * 1024 * 1024 {
                 throw StreamError.header
             }
@@ -241,6 +277,33 @@ final class StreamSession {
             let payload = Data(buffer[12..<(12 + length)])
             buffer.removeSubrange(0..<(12 + length))
             onFrame?(payload, pts)
+        }
+    }
+
+    func sendTouch(action: UInt8, x: UInt16, y: UInt16) {
+        sendControl(type: 2, action: action, a: x, b: y)
+    }
+
+    func sendKey(action: UInt8, keyCode: UInt16) {
+        sendControl(type: 3, action: action, a: keyCode, b: 0)
+    }
+
+    private func sendControl(type: UInt8, action: UInt8, a: UInt16, b: UInt16) {
+        var bytes = [UInt8](repeating: 0, count: 12)
+        bytes[0] = 0xFF
+        bytes[1] = 0xFF
+        bytes[2] = 0xFF
+        bytes[3] = 0xFD
+        bytes[4] = type
+        bytes[5] = action
+        bytes[6] = UInt8(a >> 8)
+        bytes[7] = UInt8(a & 0xFF)
+        bytes[8] = UInt8(b >> 8)
+        bytes[9] = UInt8(b & 0xFF)
+        let payload = Data(bytes)
+        queue.async { [weak self] in
+            guard let self, !self.closed, let connection = self.connection else { return }
+            connection.send(content: payload, completion: .contentProcessed { _ in })
         }
     }
 
@@ -256,6 +319,10 @@ final class StreamSession {
 
     private func be32(_ data: Data, _ offset: Int) -> UInt32 {
         UInt32(data[offset]) << 24 | UInt32(data[offset + 1]) << 16 | UInt32(data[offset + 2]) << 8 | UInt32(data[offset + 3])
+    }
+
+    private func be16(_ data: Data, _ offset: Int) -> UInt16 {
+        UInt16(data[offset]) << 8 | UInt16(data[offset + 1])
     }
 
     private func be64(_ data: Data, _ offset: Int) -> UInt64 {

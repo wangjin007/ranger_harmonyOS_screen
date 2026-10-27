@@ -11,7 +11,7 @@ HarmonyOS 官方没有 Mac 版多屏协同。本项目做法接近 [scrcpy](http
 - **USB**：走 `hdc` 调试通道转发画面
 - **无线扫码**：手机扫 Mac 上的二维码，同一 Wi-Fi（或电脑连手机热点）直接传画面，日常不必再插线
 
-当前版本只传输画面，不控制手机、不传声音。后续计划见 [TODO.md](TODO.md)。
+当前版本传输画面和系统声音，并支持在 Mac 上点击、滑动和键盘输入。后续计划见 [TODO.md](TODO.md)。
 
 不支持旧版「安卓底」鸿蒙，那些设备请直接用 scrcpy。
 
@@ -157,8 +157,8 @@ USB 用完再切无线：拔线后可在手机上点停止，Mac 切到无线再
 
 - 每次**新开**投屏会话都要在设备上允许录屏，状态栏会有录屏胶囊；旋转屏幕不会再要一次授权
 - 锁屏、密码页、部分 DRM 视频会被系统黑掉或暂停
-- 没有反向触控、没有声音
-- 第一次安装 HAP 仍要开发者模式 + Debug 签名，不能当普通投屏器给未开发的设备用，也不能上架
+- 没有绕过录屏授权；触控和键盘需要手机允许「输入注入」，系统拒绝时操作不会生效
+- 第一次安装 HAP 仍要开发者模式 + Debug 签名，不能上架
 - 无线要求同一局域网；电脑若开了防火墙，需要允许 OHScreen
 - 同一时刻无线只接受一台设备
 
@@ -177,7 +177,7 @@ HarmonyOS has no official Multi-Screen Collaboration client for Mac. This projec
 - **USB**: video over the `hdc` debug channel
 - **Wireless QR**: the phone scans a QR code on the Mac and streams over the same Wi-Fi (or the Mac joined to the phone hotspot). Day-to-day use does not need a cable
 
-This version sends video only: no remote control, no audio. See [TODO.md](TODO.md) for planned work.
+This version sends video and system audio, and supports clicks, drags, and keyboard input from the Mac. See [TODO.md](TODO.md) for remaining work.
 
 AOSP-based (old) HarmonyOS devices are not supported. Use scrcpy for those.
 
@@ -323,8 +323,8 @@ These come from the OS and this version. They are not bugs:
 
 - Every **new** mirroring session needs on-device screen-recording permission, and a recording pill appears in the status bar. Rotating the device does not prompt again
 - Lock screen, password screens, and some DRM video are blacked out or paused by the system
-- No reverse control, no audio
-- The first HAP install still needs Developer mode and a Debug signature. This is not a consumer caster for unsigned devices, and it cannot be published to an app store
+- Touch and keyboard need the on-device input-injection prompt; if the system denies it, those controls do nothing
+- The first HAP install still needs Developer mode and a Debug signature, and it cannot be published to an app store
 - Wireless needs the same LAN; the Mac firewall must allow OHScreen
 - Wireless accepts only one device at a time
 

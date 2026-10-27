@@ -23,9 +23,12 @@ public:
     void MarkClientDead();
     void NotifyCaptureReady(int result);
     bool SendPacket(int64_t ptsUs, const uint8_t *data, int32_t size);
+    bool SendAudio(int64_t ptsUs, const uint8_t *data, int32_t size);
+    bool SendVolume(int percent);
     void SendCodecConfig(const uint8_t *data, int32_t size);
     void RequestKeyFrame();
     void HandleEncoderOutput(int64_t ptsUs, const uint8_t *data, int32_t size, uint32_t flags);
+    void HandleAudio(int64_t ptsUs, const uint8_t *data, int32_t size);
 
 private:
     ScreenStreamer() = default;
@@ -56,6 +59,7 @@ private:
     int64_t pendingFramePts_{0};
     std::atomic<int> captureReady_{0};
     std::atomic<bool> headerSent_{false};
+    std::atomic<uint32_t> audioPacketCount_{0};
     std::thread acceptThread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> clientDead_{false};

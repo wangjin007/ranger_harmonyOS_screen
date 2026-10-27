@@ -134,10 +134,22 @@ struct ContentView: View {
             ZStack {
                 GeometryReader { geo in
                     let box = Self.fitted(model.videoSize, in: geo.size)
-                    VideoCanvas(layer: model.renderer.displayLayer)
-                        .frame(width: box.width, height: box.height)
-                        .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
-                        .background(Color.black)
+                    ZStack {
+                        VideoCanvas(layer: model.renderer.displayLayer)
+                        if model.connected {
+                            ControlSurface(
+                                onTouch: { action, x, y, size in
+                                    model.sendPointer(action: action, x: x, y: y, viewSize: size)
+                                },
+                                onKey: { event, down in
+                                    model.sendKey(event: event, down: down)
+                                }
+                            )
+                        }
+                    }
+                    .frame(width: box.width, height: box.height)
+                    .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                    .background(Color.black)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.black)

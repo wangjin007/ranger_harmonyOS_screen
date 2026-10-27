@@ -137,6 +137,21 @@ static napi_value GetState(napi_env env, napi_callback_info info)
     return result;
 }
 
+static napi_value SendVolume(napi_env env, napi_callback_info info)
+{
+    size_t argc = 1;
+    napi_value args[1] = {nullptr};
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    int32_t percent = 100;
+    if (argc > 0) {
+        napi_get_value_int32(env, args[0], &percent);
+    }
+    bool ok = ScreenStreamer::Get().SendVolume(percent);
+    napi_value result;
+    napi_get_boolean(env, ok, &result);
+    return result;
+}
+
 EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports)
 {
@@ -146,6 +161,7 @@ static napi_value Init(napi_env env, napi_value exports)
         {"updateSize", nullptr, UpdateSize, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"stopServer", nullptr, StopServer, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"getState", nullptr, GetState, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"sendVolume", nullptr, SendVolume, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
     return exports;

@@ -34,10 +34,15 @@ final class AppModel: ObservableObject {
 
     let renderer = VideoRenderer()
     private let stream = StreamSession()
+    private let audioPlayer = AudioPlayer()
     private let usbPort = 27183
     private var frameCount = 0
     private var sessionEpoch = 0
     private var wirelessPin: UInt32 = 0
+    private var lastPointerMove = Date.distantPast
+    private var loggedAudio = false
+    private let usbInputQueue = DispatchQueue(label: "com.ohscreen.usb-input")
+    private var usbPointerStart: CGPoint?
 
     init() {
         renderer.onEvent = { [weak self] msg in
@@ -132,6 +137,7 @@ final class AppModel: ObservableObject {
         sessionEpoch += 1
         stream.stop()
         renderer.reset()
+        audioPlayer.reset()
         connected = false
         busy = false
         linkMode = mode
@@ -153,6 +159,7 @@ final class AppModel: ObservableObject {
         let known = devices
         stream.stop()
         renderer.reset()
+        audioPlayer.reset()
         connected = false
         busy = false
         frameCount = 0
@@ -198,6 +205,10 @@ final class AppModel: ObservableObject {
             onHeader: { [weak self] header in self?.handleHeader(header) },
             onSizeChange: { [weak self] header in self?.handleSizeChange(header) },
             onFrame: { [weak self] data, pts in self?.handleFrame(data, pts: pts) },
+            onAudio: { [weak self] pcm, pts, rate, channels in
+                self?.handleAudio(pcm, pts: pts, sampleRate: rate, channels: channels)
+            },
+            onVolume: { [weak self] percent in self?.handleRemoteVolume(percent) },
             onClose: { [weak self] err in self?.handleClose(err, epoch: epoch) },
             onReject: { [weak self] in
                 self?.log("已有设备在投屏，已拒绝另一台手机。换机请先点断开，或让当前手机点停止后再扫。")
@@ -220,7 +231,9 @@ final class AppModel: ObservableObject {
         connected = false
         status = "正在连接…"
         frameCount = 0
+        loggedAudio = false
         renderer.reset()
+        audioPlayer.reset()
         stream.stop()
         let serial = selectedDevice
         let hapHint = hapPath
@@ -268,6 +281,10 @@ final class AppModel: ObservableObject {
                         onHeader: { [weak self] header in self?.handleHeader(header) },
                         onSizeChange: { [weak self] header in self?.handleSizeChange(header) },
                         onFrame: { [weak self] data, pts in self?.handleFrame(data, pts: pts) },
+                        onAudio: { [weak self] pcm, pts, rate, channels in
+                            self?.handleAudio(pcm, pts: pts, sampleRate: rate, channels: channels)
+                        },
+                        onVolume: { [weak self] percent in self?.handleRemoteVolume(percent) },
                         onClose: { [weak self] err in self?.handleClose(err, epoch: epoch) }
                     )
                 }
@@ -288,6 +305,7 @@ final class AppModel: ObservableObject {
         sessionEpoch += 1
         stream.stop()
         renderer.reset()
+        audioPlayer.reset()
         connected = false
         busy = false
         if linkMode == .wireless {
@@ -305,8 +323,15 @@ final class AppModel: ObservableObject {
         videoSize = CGSize(width: header.width, height: header.height)
         connected = true
         busy = false
+        loggedAudio = false
+        audioPlayer.reset()
         status = "投屏中 \(header.width)×\(header.height)@\(header.fps)"
         log("收到视频头 \(header.width)×\(header.height) @\(header.fps)")
+        if linkMode == .usb {
+            log("USB 控制已启用：可点击、滑动，点一下画面后用键盘输入。系统声音会在电脑播放。")
+        } else {
+            log("系统声音会在电脑播放。无线触控/键盘仅在设备支持输入注入授权时可用。")
+        }
     }
 
     private func handleSizeChange(_ header: StreamHeader) {
@@ -317,6 +342,7 @@ final class AppModel: ObservableObject {
     }
 
     private func handleFrame(_ data: Data, pts: UInt64) {
+        audioPlayer.noteVideo(ptsUs: pts)
         renderer.decode(annexB: data, ptsUs: pts)
         let bytes = data.count
         DispatchQueue.main.async {
@@ -327,11 +353,88 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func handleAudio(_ pcm: Data, pts: UInt64, sampleRate: Int, channels: Int) {
+        if !loggedAudio {
+            loggedAudio = true
+            log("收到系统声音 \(sampleRate) Hz × \(channels)")
+        }
+        audioPlayer.play(pcm: pcm, ptsUs: pts, sampleRate: Double(sampleRate), channels: channels)
+    }
+
+    private func handleRemoteVolume(_ percent: Int) {
+        audioPlayer.setVolume(percent: percent)
+        log("手机音量调节：电脑端 \(percent)%")
+    }
+
+    func sendPointer(action: UInt8, x: CGFloat, y: CGFloat, viewSize: CGSize) {
+        guard connected, viewSize.width > 1, viewSize.height > 1 else { return }
+        let nx = min(max(x / viewSize.width, 0), 1)
+        let ny = min(max(y / viewSize.height, 0), 1)
+        if linkMode == .usb {
+            let point = CGPoint(x: nx, y: ny)
+            if action == 1 {
+                usbPointerStart = point
+            } else if action == 3, let start = usbPointerStart {
+                usbPointerStart = nil
+                sendUsbGesture(from: start, to: point)
+            }
+            return
+        }
+        if action == 2, Date().timeIntervalSince(lastPointerMove) < 0.016 { return }
+        if action == 2 { lastPointerMove = Date() }
+        stream.sendTouch(action: action, x: UInt16((nx * 65535).rounded()), y: UInt16((ny * 65535).rounded()))
+    }
+
+    func sendKey(event: NSEvent, down: Bool) {
+        guard connected, let code = HarmonyKey.code(for: event) else { return }
+        if linkMode == .usb {
+            guard down else { return }
+            let serial = selectedDevice
+            usbInputQueue.async { [weak self] in
+                do {
+                    guard let hdc = HdcClient.find() else { throw HdcError.notFound }
+                    try hdc.injectKey(serial: serial, keyCode: code)
+                } catch {
+                    DispatchQueue.main.async { self?.log(error.localizedDescription) }
+                }
+            }
+            return
+        }
+        let shift = event.modifierFlags.contains(.shift)
+        if down, shift {
+            stream.sendKey(action: 1, keyCode: HarmonyKey.shiftLeft)
+        }
+        stream.sendKey(action: down ? 1 : 2, keyCode: code)
+        if !down, shift {
+            stream.sendKey(action: 2, keyCode: HarmonyKey.shiftLeft)
+        }
+    }
+
+    private func sendUsbGesture(from: CGPoint, to: CGPoint) {
+        let serial = selectedDevice
+        usbInputQueue.async { [weak self] in
+            do {
+                guard let hdc = HdcClient.find() else { throw HdcError.notFound }
+                let size = try hdc.displaySize(serial: serial)
+                let start = CGPoint(x: from.x * size.width, y: from.y * size.height)
+                let end = CGPoint(x: to.x * size.width, y: to.y * size.height)
+                if hypot(to.x - from.x, to.y - from.y) < 0.01 {
+                    try hdc.injectClick(serial: serial, x: Int(end.x.rounded()), y: Int(end.y.rounded()))
+                } else {
+                    try hdc.injectSwipe(serial: serial, from: start, to: end)
+                }
+            } catch {
+                DispatchQueue.main.async { self?.log(error.localizedDescription) }
+            }
+        }
+    }
+
     private func handleClose(_ err: Error?, epoch: Int) {
         guard epoch == sessionEpoch else { return }
         connected = false
         busy = false
         renderer.reset()
+        audioPlayer.reset()
         if let err {
             log("连接结束：\(err.localizedDescription)")
         } else {

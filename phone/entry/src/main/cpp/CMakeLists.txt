@@ -12,7 +12,8 @@ include_directories(${NATIVERENDER_ROOT_PATH}
 
 add_library(ohscreen SHARED
     napi_init.cpp
-    screen_streamer.cpp)
+    screen_streamer.cpp
+    input_control.cpp)
 
 target_link_libraries(ohscreen PUBLIC
     libace_napi.z.so
@@ -22,4 +23,6 @@ target_link_libraries(ohscreen PUBLIC
     libnative_media_core.so
     libnative_media_codecbase.so
     libnative_media_venc.so
-    libnative_window.so)
+    libnative_window.so
+    libohinput.so
+    libnative_display_manager.so)

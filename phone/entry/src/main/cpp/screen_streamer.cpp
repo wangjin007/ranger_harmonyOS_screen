@@ -1,4 +1,5 @@
 #include "screen_streamer.h"
+#include "input_control.h"
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -69,6 +70,33 @@ void PutBe64(uint8_t *p, uint64_t v)
 {
     PutBe32(p, static_cast<uint32_t>(v >> 32));
     PutBe32(p + 4, static_cast<uint32_t>(v & 0xffffffffu));
+}
+
+uint32_t ReadBe32(const uint8_t *p)
+{
+    return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
+        (static_cast<uint32_t>(p[2]) << 8) | static_cast<uint32_t>(p[3]);
+}
+
+void OnCaptureData(OH_AVScreenCapture *capture, OH_AVBuffer *buffer,
+    OH_AVScreenCaptureBufferType type, int64_t timestamp, void *userData)
+{
+    (void)capture;
+    auto *self = static_cast<ScreenStreamer *>(userData);
+    if (self == nullptr || buffer == nullptr || type != OH_SCREEN_CAPTURE_BUFFERTYPE_AUDIO_INNER) {
+        return;
+    }
+    OH_AVCodecBufferAttr attr;
+    memset(&attr, 0, sizeof(attr));
+    if (OH_AVBuffer_GetBufferAttr(buffer, &attr) != AV_ERR_OK || attr.size <= 0) {
+        return;
+    }
+    uint8_t *addr = OH_AVBuffer_GetAddr(buffer);
+    if (addr == nullptr) {
+        return;
+    }
+    const int64_t pts = timestamp > 0 ? timestamp : attr.pts;
+    self->HandleAudio(pts, addr + attr.offset, attr.size);
 }
 
 void OnEncError(OH_AVCodec *codec, int32_t errorCode, void *userData)
@@ -392,6 +420,68 @@ bool ScreenStreamer::SendPacket(int64_t ptsUs, const uint8_t *data, int32_t size
     return WriteAll(fd, data, static_cast<size_t>(size));
 }
 
+void ScreenStreamer::HandleAudio(int64_t ptsUs, const uint8_t *data, int32_t size)
+{
+    const uint32_t count = audioPacketCount_.fetch_add(1) + 1;
+    if (count == 1) {
+        OH_LOG_INFO(LOG_APP, "first inner audio %{public}d bytes pts=%{public}lld", size,
+            static_cast<long long>(ptsUs));
+    }
+    if (!SendAudio(ptsUs, data, size)) {
+        OH_LOG_ERROR(LOG_APP, "send audio failed");
+    }
+}
+
+bool ScreenStreamer::SendAudio(int64_t ptsUs, const uint8_t *data, int32_t size)
+{
+    if (data == nullptr || size <= 0 || size > 256 * 1024) {
+        return true;
+    }
+    if (!headerSent_.load()) {
+        return true;
+    }
+    int fd = -1;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        fd = clientFd_;
+    }
+    if (fd < 0) {
+        return false;
+    }
+    std::vector<uint8_t> pkt(static_cast<size_t>(20 + size));
+    PutBe32(pkt.data(), 0xFFFFFFFEu);
+    PutBe32(pkt.data() + 4, static_cast<uint32_t>(size));
+    PutBe64(pkt.data() + 8, static_cast<uint64_t>(ptsUs < 0 ? 0 : ptsUs));
+    PutBe16(pkt.data() + 16, 48000);
+    pkt[18] = 2;
+    pkt[19] = 0;
+    memcpy(pkt.data() + 20, data, static_cast<size_t>(size));
+    std::lock_guard<std::mutex> sendLock(sendMu_);
+    return WriteAll(fd, pkt.data(), pkt.size());
+}
+
+bool ScreenStreamer::SendVolume(int percent)
+{
+    if (!headerSent_.load()) {
+        return false;
+    }
+    int fd = -1;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        fd = clientFd_;
+    }
+    if (fd < 0) {
+        return false;
+    }
+    const uint16_t value = static_cast<uint16_t>(percent < 0 ? 0 : (percent > 100 ? 100 : percent));
+    uint8_t pkt[12] = {0};
+    PutBe32(pkt, 0xFFFFFFFCu);
+    pkt[4] = 1; // Media volume percentage.
+    PutBe16(pkt + 6, value);
+    std::lock_guard<std::mutex> sendLock(sendMu_);
+    return WriteAll(fd, pkt, sizeof(pkt));
+}
+
 void ScreenStreamer::HandleEncoderOutput(int64_t ptsUs, const uint8_t *data, int32_t size, uint32_t flags)
 {
     if (data == nullptr || size <= 0) {
@@ -587,8 +677,14 @@ void ScreenStreamer::RunSession(int fd)
     }
     headerSent_.store(true);
     state_.store(kStateStreaming);
+    // USB control uses the privileged `hdc shell uitest` fallback on Mac.
+    // Ask the OS for app-level injection only for cable-free sessions.
+    if (clientMode_) {
+        RequestInputInjection();
+    }
     RequestKeyFrame();
     SendCurrentCodecConfig();
+    std::vector<uint8_t> inbound;
     while (running_.load() && !clientDead_.load()) {
         pollfd cp;
         cp.fd = fd;
@@ -599,10 +695,22 @@ void ScreenStreamer::RunSession(int fd)
             break;
         }
         if (cr > 0 && (cp.revents & POLLIN)) {
-            uint8_t junk[8];
-            ssize_t n = recv(fd, junk, sizeof(junk), 0);
+            uint8_t tmp[512];
+            ssize_t n = recv(fd, tmp, sizeof(tmp), 0);
             if (n <= 0) {
                 break;
+            }
+            inbound.insert(inbound.end(), tmp, tmp + n);
+            while (inbound.size() >= 12) {
+                if (ReadBe32(inbound.data()) != 0xFFFFFFFDu) {
+                    inbound.erase(inbound.begin());
+                    continue;
+                }
+                ApplyRemoteInput(inbound.data());
+                inbound.erase(inbound.begin(), inbound.begin() + 12);
+            }
+            if (inbound.size() > 4096) {
+                inbound.erase(inbound.begin(), inbound.end() - 11);
             }
         }
     }
@@ -801,6 +909,7 @@ void ScreenStreamer::DestroyEncoder()
 bool ScreenStreamer::StartCapture()
 {
     StopCapture();
+    audioPacketCount_.store(0);
     if (!CreateEncoder()) {
         DestroyEncoder();
         return false;
@@ -817,6 +926,7 @@ bool ScreenStreamer::StartCapture()
     OH_AVScreenCapture_SetErrorCallback(capture, OnCaptureError, this);
     OH_AVScreenCapture_SetStateCallback(capture, OnCaptureState, this);
     OH_AVScreenCapture_SetDisplayCallback(capture, OnDisplaySelected, this);
+    OH_AVScreenCapture_SetDataCallback(capture, OnCaptureData, this);
 
     OH_AVScreenCaptureConfig config;
     memset(&config, 0, sizeof(config));
@@ -831,11 +941,35 @@ bool ScreenStreamer::StartCapture()
     config.videoInfo.videoEncInfo.videoCodec = OH_H264;
     config.videoInfo.videoEncInfo.videoBitrate = bitrate_;
     config.videoInfo.videoEncInfo.videoFrameRate = fps_;
+    config.audioInfo.innerCapInfo.audioSampleRate = 48000;
+    config.audioInfo.innerCapInfo.audioChannels = 2;
+    config.audioInfo.innerCapInfo.audioSource = OH_ALL_PLAYBACK;
+    config.audioInfo.micCapInfo.audioSampleRate = 48000;
+    config.audioInfo.micCapInfo.audioChannels = 1;
+    // The microphone is disabled after Init, but HarmonyOS still validates this
+    // config entry. OH_SOURCE_INVALID makes Init fail on physical devices.
+    config.audioInfo.micCapInfo.audioSource = OH_MIC;
 
     if (OH_AVScreenCapture_Init(capture, config) != AV_SCREEN_CAPTURE_ERR_OK) {
-        OH_LOG_ERROR(LOG_APP, "capture init failed");
-        StopCapture();
-        return false;
+        OH_LOG_ERROR(LOG_APP, "capture init with audio failed, retry video only");
+        OH_AVScreenCapture_Release(capture);
+        capture = OH_AVScreenCapture_Create();
+        if (capture == nullptr) {
+            capture_ = nullptr;
+            DestroyEncoder();
+            return false;
+        }
+        capture_ = capture;
+        OH_AVScreenCapture_SetErrorCallback(capture, OnCaptureError, this);
+        OH_AVScreenCapture_SetStateCallback(capture, OnCaptureState, this);
+        OH_AVScreenCapture_SetDisplayCallback(capture, OnDisplaySelected, this);
+        // Restore the exact video-only shape that worked before audio support.
+        memset(&config.audioInfo, 0, sizeof(config.audioInfo));
+        if (OH_AVScreenCapture_Init(capture, config) != AV_SCREEN_CAPTURE_ERR_OK) {
+            OH_LOG_ERROR(LOG_APP, "capture init failed");
+            StopCapture();
+            return false;
+        }
     }
     OH_AVScreenCapture_SetMicrophoneEnabled(capture, false);
     // 采集会话保持不变；旋转由 Mac 按相对角度转正，避免再次弹出录屏授权。
